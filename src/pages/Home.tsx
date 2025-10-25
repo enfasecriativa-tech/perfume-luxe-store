@@ -53,21 +53,21 @@ const Home = () => {
       <main className="flex-1">
         {/* Hero Banner */}
         <section className="relative w-full overflow-hidden">
-          <div className="relative h-[400px] md:h-[500px] lg:h-[600px]">
+          <div className="relative h-[300px] md:h-[500px] lg:h-[600px]">
             <img
               src={heroBanner}
               alt="Banner Principal"
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent flex items-center">
+            <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center">
               <div className="container mx-auto px-4">
-                <div className="max-w-xl space-y-4">
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white">
+                <div className="max-w-xl space-y-3 md:space-y-4">
+                  <h1 className="text-2xl md:text-5xl lg:text-6xl font-bold text-white">
                     Descubra sua
                     <br />
                     <span className="text-primary">Fragrância Perfeita</span>
                   </h1>
-                  <p className="text-lg text-white/90">
+                  <p className="text-base md:text-lg text-white/90">
                     Perfumes importados com até 60% de desconto
                   </p>
                   <Link to="/produtos">
@@ -82,23 +82,23 @@ const Home = () => {
         </section>
 
         {/* Featured Products */}
-        <section className="container mx-auto px-4 py-16">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-foreground mb-2">
+        <section className="container mx-auto px-4 py-8 md:py-16">
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
               Produtos Selecionados
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground">
               Os perfumes mais desejados do momento
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>
 
-          <div className="mt-12 text-center">
+          <div className="mt-8 md:mt-12 text-center">
             <Link to="/produtos">
               <Button variant="outline" size="lg" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
                 Ver Todos os Produtos
@@ -108,12 +108,12 @@ const Home = () => {
         </section>
 
         {/* Categories Section */}
-        <section className="bg-secondary py-16">
+        <section className="bg-secondary py-8 md:py-16">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6 md:mb-8 text-center">
               Categorias em Destaque
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {["Perfumes Femininos", "Perfumes Masculinos", "Maquiagem", "Cosméticos"].map(
                 (category) => (
                   <Link
