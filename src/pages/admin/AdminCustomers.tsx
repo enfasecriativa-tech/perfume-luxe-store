@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -23,6 +23,7 @@ interface Customer {
 const AdminCustomers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [open, setOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -53,24 +54,63 @@ const AdminCustomers = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { error } = await supabase.from('customers').insert({
-      name: formData.name,
-      email: formData.email || null,
-      phone: formData.phone || null,
-      cpf: formData.cpf || null,
-      address: formData.address || null,
-      city: formData.city || null,
-      state: formData.state || null,
-    });
+    if (editingCustomer) {
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          name: formData.name,
+          email: formData.email || null,
+          phone: formData.phone || null,
+          cpf: formData.cpf || null,
+          address: formData.address || null,
+          city: formData.city || null,
+          state: formData.state || null,
+        })
+        .eq('id', editingCustomer.id);
 
-    if (error) {
-      toast.error('Erro ao criar cliente');
+      if (error) {
+        toast.error('Erro ao atualizar cliente');
+      } else {
+        toast.success('Cliente atualizado com sucesso!');
+        setOpen(false);
+        setEditingCustomer(null);
+        setFormData({ name: '', email: '', phone: '', cpf: '', address: '', city: '', state: '' });
+        loadCustomers();
+      }
     } else {
-      toast.success('Cliente criado com sucesso!');
-      setOpen(false);
-      setFormData({ name: '', email: '', phone: '', cpf: '', address: '', city: '', state: '' });
-      loadCustomers();
+      const { error } = await supabase.from('customers').insert({
+        name: formData.name,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        cpf: formData.cpf || null,
+        address: formData.address || null,
+        city: formData.city || null,
+        state: formData.state || null,
+      });
+
+      if (error) {
+        toast.error('Erro ao criar cliente');
+      } else {
+        toast.success('Cliente criado com sucesso!');
+        setOpen(false);
+        setFormData({ name: '', email: '', phone: '', cpf: '', address: '', city: '', state: '' });
+        loadCustomers();
+      }
     }
+  };
+
+  const handleEdit = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setFormData({
+      name: customer.name,
+      email: customer.email || '',
+      phone: customer.phone || '',
+      cpf: customer.cpf || '',
+      address: customer.address || '',
+      city: customer.city || '',
+      state: customer.state || '',
+    });
+    setOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -90,7 +130,13 @@ const AdminCustomers = () => {
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Clientes</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) {
+            setEditingCustomer(null);
+            setFormData({ name: '', email: '', phone: '', cpf: '', address: '', city: '', state: '' });
+          }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -99,7 +145,7 @@ const AdminCustomers = () => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Novo Cliente</DialogTitle>
+              <DialogTitle>{editingCustomer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -164,7 +210,9 @@ const AdminCustomers = () => {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full">Criar Cliente</Button>
+              <Button type="submit" className="w-full">
+                {editingCustomer ? 'Atualizar Cliente' : 'Criar Cliente'}
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -191,13 +239,22 @@ const AdminCustomers = () => {
                 <TableCell>{customer.cpf || '-'}</TableCell>
                 <TableCell>{customer.city || '-'}</TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(customer.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(customer)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(customer.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
