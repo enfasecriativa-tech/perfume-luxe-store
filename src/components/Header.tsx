@@ -1,5 +1,5 @@
-import { Search, User, ShoppingCart, Menu } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Search, User, ShoppingCart, Menu, LogOut } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
@@ -7,10 +7,24 @@ import {
   SheetContent,
   SheetTrigger,
 } from "./ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const menuItems = [
     { label: "Perfumes", href: "/produtos" },
@@ -69,12 +83,35 @@ const Header = () => {
 
           {/* User Actions */}
           <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-            <Link to="/minha-conta">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <User className="h-5 w-5" />
-                <span className="hidden lg:inline">Minha Conta</span>
-              </Button>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <User className="h-5 w-5" />
+                  <span className="hidden lg:inline">Minha Conta</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {user ? (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/minha-conta" className="cursor-pointer">
+                        Minha Conta
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sair
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link to="/auth" className="cursor-pointer">
+                      Entrar / Criar conta
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link to="/carrinho">
               <Button variant="ghost" size="sm" className="gap-2 relative">
                 <ShoppingCart className="h-5 w-5" />
