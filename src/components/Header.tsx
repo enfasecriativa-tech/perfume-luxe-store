@@ -69,17 +69,21 @@ const Header = () => {
 
           {/* User Actions */}
           <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <User className="h-5 w-5" />
-              <span className="hidden lg:inline">Minha Conta</span>
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2 relative">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="hidden lg:inline">Carrinho</span>
-              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                0
-              </span>
-            </Button>
+            <Link to="/minha-conta">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <User className="h-5 w-5" />
+                <span className="hidden lg:inline">Minha Conta</span>
+              </Button>
+            </Link>
+            <Link to="/carrinho">
+              <Button variant="ghost" size="sm" className="gap-2 relative">
+                <ShoppingCart className="h-5 w-5" />
+                <span className="hidden lg:inline">Carrinho</span>
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  0
+                </span>
+              </Button>
+            </Link>
           </div>
         </div>
 

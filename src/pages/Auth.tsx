@@ -19,7 +19,7 @@ const Auth = () => {
     setLoading(true);
     try {
       await signIn(email, password);
-      navigate('/admin');
+      navigate('/minha-conta');
     } catch (error) {
       // Error handled in useAuth
     } finally {
@@ -43,8 +43,8 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-secondary">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Área Administrativa</CardTitle>
-          <CardDescription>Entre ou crie sua conta para acessar o dashboard</CardDescription>
+          <CardTitle>Minha Conta</CardTitle>
+          <CardDescription>Entre ou crie sua conta para continuar</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin">

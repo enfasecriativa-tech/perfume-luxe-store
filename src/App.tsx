@@ -10,6 +10,8 @@ import Home from "./pages/Home";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Auth from "./pages/Auth";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import Cart from "./pages/Cart";
 import Dashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminCustomers from "./pages/admin/AdminCustomers";
@@ -31,6 +33,8 @@ const App = () => (
             <Route path="/produtos" element={<Products />} />
             <Route path="/produto/:id" element={<ProductDetail />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/minha-conta" element={<CustomerDashboard />} />
+            <Route path="/carrinho" element={<Cart />} />
             <Route path="/admin" element={<ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/produtos" element={<ProtectedRoute><AdminLayout><AdminProducts /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/clientes" element={<ProtectedRoute><AdminLayout><AdminCustomers /></AdminLayout></ProtectedRoute>} />
