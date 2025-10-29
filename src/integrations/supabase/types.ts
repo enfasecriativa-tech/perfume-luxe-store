@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      addresses: {
+        Row: {
+          city: string
+          complement: string | null
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          neighborhood: string
+          number: string
+          state: string
+          street: string
+          updated_at: string | null
+          user_id: string
+          zip_code: string
+        }
+        Insert: {
+          city: string
+          complement?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          neighborhood: string
+          number: string
+          state: string
+          street: string
+          updated_at?: string | null
+          user_id: string
+          zip_code: string
+        }
+        Update: {
+          city?: string
+          complement?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          neighborhood?: string
+          number?: string
+          state?: string
+          street?: string
+          updated_at?: string | null
+          user_id?: string
+          zip_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addresses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atualizar_banco: {
         Row: {
           created_at: string
@@ -77,6 +130,42 @@ export type Database = {
         }
         Relationships: []
       }
+      favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand: string | null
@@ -115,6 +204,39 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          birth_date: string | null
+          cpf: string | null
+          created_at: string | null
+          full_name: string
+          id: string
+          person_type: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          full_name: string
+          id: string
+          person_type?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          person_type?: string | null
+          phone?: string | null
           updated_at?: string | null
         }
         Relationships: []
