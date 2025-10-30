@@ -5,9 +5,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { fetchCep, formatCep, BRAZILIAN_STATES } from '@/lib/cep';
 
 interface Address {
   id: string;
@@ -28,6 +30,7 @@ export const AddressesTab = () => {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [loadingCep, setLoadingCep] = useState(false);
   
   const [formData, setFormData] = useState({
     label: '',
@@ -172,6 +175,31 @@ export const AddressesTab = () => {
     }
   };
 
+  const handleCepChange = async (value: string) => {
+    const formatted = formatCep(value);
+    setFormData({ ...formData, zip_code: formatted });
+
+    const cleanCep = value.replace(/\D/g, '');
+    if (cleanCep.length === 8) {
+      setLoadingCep(true);
+      const cepData = await fetchCep(cleanCep);
+      setLoadingCep(false);
+
+      if (cepData) {
+        setFormData(prev => ({
+          ...prev,
+          street: cepData.street,
+          neighborhood: cepData.neighborhood,
+          city: cepData.city,
+          state: cepData.state
+        }));
+        toast.success('Endereço preenchido automaticamente!');
+      } else {
+        toast.error('CEP não encontrado');
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -210,10 +238,15 @@ export const AddressesTab = () => {
                   <Input
                     id="zip_code"
                     value={formData.zip_code}
-                    onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                    onChange={(e) => handleCepChange(e.target.value)}
                     placeholder="00000-000"
+                    maxLength={9}
+                    disabled={loadingCep}
                     required
                   />
+                  {loadingCep && (
+                    <p className="text-xs text-muted-foreground">Buscando endereço...</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -268,14 +301,22 @@ export const AddressesTab = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="state">Estado*</Label>
-                  <Input
-                    id="state"
+                  <Select
                     value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="SP"
-                    maxLength={2}
+                    onValueChange={(value) => setFormData({ ...formData, state: value })}
                     required
-                  />
+                  >
+                    <SelectTrigger id="state">
+                      <SelectValue placeholder="Selecione o estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BRAZILIAN_STATES.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>
+                          {state.label} ({state.value})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
