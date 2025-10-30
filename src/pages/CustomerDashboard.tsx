@@ -11,6 +11,7 @@ import { User, MapPin, Heart, ShoppingBag, LogOut } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { toast } from 'sonner';
+import { AddressesTab } from '@/components/AddressesTab';
 
 const CustomerDashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -188,20 +189,7 @@ const CustomerDashboard = () => {
             </TabsContent>
 
             <TabsContent value="addresses">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Meus Endereços</CardTitle>
-                  <CardDescription>
-                    Gerencie seus endereços de entrega
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Nenhum endereço cadastrado ainda.
-                  </p>
-                  <Button className="mt-4">Adicionar Endereço</Button>
-                </CardContent>
-              </Card>
+              <AddressesTab />
             </TabsContent>
 
             <TabsContent value="orders">
