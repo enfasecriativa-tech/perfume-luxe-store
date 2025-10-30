@@ -12,6 +12,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { toast } from 'sonner';
 import { AddressesTab } from '@/components/AddressesTab';
+import { FavoritesTab } from '@/components/FavoritesTab';
 
 const CustomerDashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -209,19 +210,7 @@ const CustomerDashboard = () => {
             </TabsContent>
 
             <TabsContent value="favorites">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Meus Favoritos</CardTitle>
-                  <CardDescription>
-                    Produtos que você salvou
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Nenhum produto favorito ainda.
-                  </p>
-                </CardContent>
-              </Card>
+              <FavoritesTab />
             </TabsContent>
           </Tabs>
         </div>

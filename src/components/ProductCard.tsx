@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter } from "./ui/card";
+import { Heart } from "lucide-react";
+import { useFavorites } from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
   id: string;
@@ -12,15 +15,38 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ id, image, brand, name, price, installments }: ProductCardProps) => {
+  const { isFavorite, toggleFavorite, loading } = useFavorites();
+  const favorited = isFavorite(id);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(id);
+  };
+
   return (
     <Card className="group overflow-hidden border-border hover:shadow-lg transition-all duration-300">
       <Link to={`/produto/${id}`}>
-        <div className="aspect-square overflow-hidden bg-secondary">
+        <div className="aspect-square overflow-hidden bg-secondary relative">
           <img
             src={image}
             alt={name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm hover:bg-background"
+            onClick={handleFavoriteClick}
+            disabled={loading}
+          >
+            <Heart
+              className={cn(
+                "h-5 w-5 transition-colors",
+                favorited ? "fill-red-500 text-red-500" : "text-foreground"
+              )}
+            />
+          </Button>
         </div>
       </Link>
       <CardContent className="p-4">
