@@ -3,6 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
+// Helper function to validate UUID
+const isValidUUID = (uuid: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 export const useFavorites = () => {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -33,6 +39,13 @@ export const useFavorites = () => {
   const toggleFavorite = async (productId: string) => {
     if (!user) {
       toast.error('Faça login para adicionar favoritos');
+      return;
+    }
+
+    // Validate UUID
+    if (!isValidUUID(productId)) {
+      toast.error('ID de produto inválido');
+      console.error('Invalid product UUID:', productId);
       return;
     }
 

@@ -2,7 +2,8 @@ import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Package, Users, ShoppingCart, Warehouse, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, Warehouse, LogOut, UserCog } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -20,6 +21,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { path: '/admin/estoque', icon: Warehouse, label: 'Estoque' },
   ];
 
+  const accountItem = { path: '/admin/minha-conta', icon: UserCog, label: 'Minha Conta' };
+  const accessItem = { path: '/admin/acessos', icon: UserCog, label: 'Criar Acesso' };
+
   return (
     <div className="min-h-screen flex bg-secondary">
       {/* Sidebar */}
@@ -27,7 +31,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         <div className="p-6">
           <h1 className="text-2xl font-bold text-primary">Admin</h1>
         </div>
-        <nav className="space-y-1 px-3">
+        <nav className="space-y-1 px-3 pb-20">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -43,7 +47,32 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
               </Link>
             );
           })}
+          
+          <Separator className="my-4" />
+          
+          {/* Minha Conta */}
+          <Link to={accountItem.path}>
+            <Button
+              variant={location.pathname === accountItem.path ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+            >
+              <accountItem.icon className="mr-2 h-4 w-4" />
+              {accountItem.label}
+            </Button>
+          </Link>
+
+          {/* Criar Acesso */}
+          <Link to={accessItem.path}>
+            <Button
+              variant={location.pathname === accessItem.path ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+            >
+              <accessItem.icon className="mr-2 h-4 w-4" />
+              {accessItem.label}
+            </Button>
+          </Link>
         </nav>
+        
         <div className="absolute bottom-4 left-3 right-3">
           <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" />

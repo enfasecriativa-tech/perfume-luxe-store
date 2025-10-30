@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -12,15 +12,29 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [signupLoading, setSignupLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect after login based on role
+  useEffect(() => {
+    if (!loading && user) {
+      console.log('🔍 Debug - User:', user.email, 'isAdmin:', isAdmin, 'loading:', loading);
+      if (isAdmin) {
+        console.log('✅ Redirecionando para /admin');
+        navigate('/admin');
+      } else {
+        console.log('👤 Redirecionando para /minha-conta');
+        navigate('/minha-conta');
+      }
+    }
+  }, [user, isAdmin, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
     try {
       await signIn(loginEmail, loginPassword);
-      navigate('/minha-conta');
+      // Navigation will be handled by useEffect
     } catch (error) {
       // Error handled in useAuth
     } finally {

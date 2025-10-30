@@ -404,7 +404,7 @@ export type Database = {
       promote_to_admin: { Args: { user_email: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "staff"
     }
     CompositeTypes: {
       [_ in never]: never

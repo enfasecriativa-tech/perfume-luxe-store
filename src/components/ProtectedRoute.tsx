@@ -6,9 +6,9 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, checkingRole } = useAuth();
 
-  if (loading) {
+  if (loading || checkingRole) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Carregando...</p>
