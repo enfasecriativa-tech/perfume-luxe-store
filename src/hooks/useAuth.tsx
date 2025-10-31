@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [checkingRole, setCheckingRole] = useState(false);
   const idleTimeoutMs = 5 * 60 * 1000; // 5 minutos
   const idleTimerRef = useRef<number | undefined>(undefined);
+  const checkingRoleRef = useRef<boolean>(false);
 
   // Set up auth state listener and initial session (mount once)
   useEffect(() => {
@@ -50,17 +51,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkAdminRole(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    // Timeout de segurança para garantir que loading não fique preso
+    const loadingTimeout = setTimeout(() => {
+      console.warn('⚠️ Timeout de loading - forçando finalização após 10s');
+      setLoading(false);
+      setCheckingRole(false);
+      checkingRoleRef.current = false;
+    }, 10000); // 10 segundos máximo
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getSession()
+      .then(({ data: { session }, error: sessionError }) => {
+        clearTimeout(loadingTimeout);
+        
+        if (sessionError) {
+          console.error('Erro ao obter sessão:', sessionError);
+          setLoading(false);
+          setCheckingRole(false);
+          return;
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Aguarda checkAdminRole completar antes de desligar loading
+          checkAdminRole(session.user.id).catch((err) => {
+            console.error('Erro no checkAdminRole:', err);
+            setLoading(false);
+            setCheckingRole(false);
+          });
+        } else {
+          setLoading(false);
+          setCheckingRole(false);
+        }
+      })
+      .catch((error) => {
+        clearTimeout(loadingTimeout);
+        console.error('Erro ao verificar sessão:', error);
+        setLoading(false);
+        setCheckingRole(false);
+      });
+    
+    return () => {
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Inactivity auto-logout handlers (depend on user)
@@ -89,10 +124,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [user]);
 
-  const checkAdminRole = async (userId: string) => {
+  const checkAdminRole = async (userId: string): Promise<void> => {
+    // Evita múltiplas chamadas simultâneas
+    if (checkingRoleRef.current) {
+      console.log('⚠️ checkAdminRole já em execução, ignorando chamada duplicada');
+      return;
+    }
+
+    checkingRoleRef.current = true;
     setCheckingRole(true);
+    
     try {
       console.log('🔍 Verificando role para userId:', userId);
+      const startTime = Date.now();
       
       const { data, error } = await supabase
         .from('user_roles')
@@ -101,21 +145,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('role', 'admin')
         .single();
 
-      console.log('📊 Resultado da query:', { data, error });
+      const duration = Date.now() - startTime;
+      console.log(`⏱️ Query concluída em ${duration}ms`, { data, error });
 
       if (!error && data) {
         console.log('✅ Usuário é ADMIN');
         setIsAdmin(true);
       } else {
-        console.log('❌ Usuário NÃO é admin ou erro:', error?.message);
+        console.log('❌ Usuário NÃO é admin:', error?.message || 'Sem role admin');
         setIsAdmin(false);
       }
     } catch (error) {
-      console.log('❌ Erro ao verificar admin:', error);
+      console.error('❌ Erro ao verificar admin:', error);
       setIsAdmin(false);
     } finally {
+      console.log('✅ Finalizando checkAdminRole');
       setCheckingRole(false);
       setLoading(false);
+      checkingRoleRef.current = false;
     }
   };
 
@@ -157,18 +204,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      // Hard reset auth-related state
+      // Limpa timers primeiro
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = undefined;
+      }
+      checkingRoleRef.current = false;
+      
+      // Reset state imediatamente
       setIsAdmin(false);
       setUser(null);
       setSession(null);
       setCheckingRole(false);
       setLoading(false);
+      
+      // Depois faz signOut no Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
       toast.success('Logout realizado com sucesso!');
     } catch (error: any) {
+      console.error('Erro no logout:', error);
+      // Mesmo com erro, limpa o estado local
+      setIsAdmin(false);
+      setUser(null);
+      setSession(null);
+      setCheckingRole(false);
+      setLoading(false);
       toast.error(error.message || 'Erro ao fazer logout');
-      throw error;
     }
   };
 

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Calendar, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
@@ -66,14 +66,20 @@ const AdminProducts = () => {
 
   const loadExchangeRate = async (date: Date) => {
     setLoadingRate(true);
-    const rate = await fetchExchangeRate(date);
-    if (rate) {
-      setExchangeRate(rate);
-      toast.success(`Cotação: US$ 1,00 = R$ ${rate.toFixed(4)}`);
-    } else {
-      toast.error('Não foi possível obter a cotação do dólar');
+    try {
+      const rate = await fetchExchangeRate(date);
+      if (rate) {
+        setExchangeRate(rate);
+        toast.success(`Cotação: US$ 1,00 = R$ ${rate.toFixed(4)}`);
+      } else {
+        toast.error('Não foi possível obter a cotação do dólar. Verifique se a data é um dia útil.');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar cotação:', error);
+      toast.error('Erro ao buscar cotação do dólar. Tente novamente.');
+    } finally {
+      setLoadingRate(false);
     }
-    setLoadingRate(false);
   };
 
   const handleDateChange = (date: Date | undefined) => {
@@ -242,6 +248,9 @@ const AdminProducts = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Novo Produto</DialogTitle>
+              <DialogDescription>
+                Preencha os dados do produto. O preço em R$ será calculado automaticamente com base na cotação do dólar.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
               <div className="space-y-2">

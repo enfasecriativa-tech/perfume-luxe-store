@@ -17,17 +17,14 @@ const Auth = () => {
 
   // Redirect after login based on role
   useEffect(() => {
-    if (!loading && user) {
-      console.log('🔍 Debug - User:', user.email, 'isAdmin:', isAdmin, 'loading:', loading);
+    if (!loading && user && !loginLoading) {
       if (isAdmin) {
-        console.log('✅ Redirecionando para /admin');
         navigate('/admin');
       } else {
-        console.log('👤 Redirecionando para /minha-conta');
         navigate('/minha-conta');
       }
     }
-  }, [user, isAdmin, loading, navigate]);
+  }, [user, isAdmin, loading, loginLoading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
