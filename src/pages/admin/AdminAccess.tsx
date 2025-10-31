@@ -10,6 +10,8 @@ import { ShieldPlus } from 'lucide-react';
 
 const AdminAccess = () => {
   const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'staff'>('admin');
   const [loading, setLoading] = useState(false);
 
@@ -18,16 +20,15 @@ const AdminAccess = () => {
     if (!email) return;
     setLoading(true);
     try {
-      if (role === 'admin') {
-        const { error } = await supabase.rpc('promote_to_admin', { user_email: email });
-        if (error) throw error;
-        toast.success('Usuário promovido a ADMIN com sucesso!');
-      } else {
-        const { error } = await supabase.rpc('promote_to_staff', { user_email: email });
-        if (error) throw error;
-        toast.success('Usuário promovido a STAFF com sucesso!');
-      }
+      const { data, error } = await supabase.functions.invoke('create-user-access', {
+        body: { email, password, full_name: fullName, role },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Falha ao criar acesso');
+      toast.success('Acesso concedido com sucesso!');
       setEmail('');
+      setFullName('');
+      setPassword('');
       setRole('admin');
     } catch (error: any) {
       toast.error(error.message || 'Erro ao conceder acesso');
@@ -54,10 +55,18 @@ const AdminAccess = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handlePromote} className="grid gap-4 md:grid-cols-3">
+          <form onSubmit={handlePromote} className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="email">E-mail do usuário</Label>
               <Input id="email" type="email" placeholder="usuario@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome completo</Label>
+              <Input id="name" type="text" placeholder="Nome e sobrenome" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha temporária</Label>
+              <Input id="password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </div>
             <div className="space-y-2">
               <Label>Função</Label>
@@ -71,7 +80,7 @@ const AdminAccess = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-4">
               <Button type="submit" disabled={loading} className="w-full md:w-auto">
                 {loading ? 'Concedendo...' : 'Conceder Acesso'}
               </Button>
@@ -79,7 +88,7 @@ const AdminAccess = () => {
           </form>
 
           <p className="text-xs text-muted-foreground mt-4">
-            Dica: Se o usuário ainda não tem conta, crie pelo Supabase (Authentication → Users → Add user) com "Auto Confirm User" e depois use este formulário para atribuir a função.
+            O usuário será criado e confirmado automaticamente. Em seguida, a função selecionada será atribuída.
           </p>
         </CardContent>
       </Card>
