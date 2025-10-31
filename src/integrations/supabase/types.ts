@@ -173,40 +173,55 @@ export type Database = {
         Row: {
           brand: string | null
           category: string | null
+          cost_date: string | null
           cost_price: number | null
+          cost_price_usd: number | null
           created_at: string | null
           description: string | null
           id: string
           image_url: string | null
+          image_url_2: string | null
+          image_url_3: string | null
           is_active: boolean | null
           name: string
           price: number
+          size: string | null
           updated_at: string | null
         }
         Insert: {
           brand?: string | null
           category?: string | null
+          cost_date?: string | null
           cost_price?: number | null
+          cost_price_usd?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          image_url_2?: string | null
+          image_url_3?: string | null
           is_active?: boolean | null
           name: string
           price: number
+          size?: string | null
           updated_at?: string | null
         }
         Update: {
           brand?: string | null
           category?: string | null
+          cost_date?: string | null
           cost_price?: number | null
+          cost_price_usd?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          image_url_2?: string | null
+          image_url_3?: string | null
           is_active?: boolean | null
           name?: string
           price?: number
+          size?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -402,6 +417,7 @@ export type Database = {
         Returns: boolean
       }
       promote_to_admin: { Args: { user_email: string }; Returns: undefined }
+      promote_to_staff: { Args: { user_email: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user" | "staff"
@@ -532,7 +548,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "staff"],
     },
   },
 } as const
