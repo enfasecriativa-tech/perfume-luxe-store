@@ -26,6 +26,9 @@ interface Product {
   size: string | null;
   category: string | null;
   brand: string | null;
+  image_url: string | null;
+  image_url_2: string | null;
+  image_url_3: string | null;
   is_active: boolean;
 }
 
@@ -35,6 +38,9 @@ const AdminProducts = () => {
   const [costDate, setCostDate] = useState<Date>(new Date());
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [loadingRate, setLoadingRate] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [imageFiles, setImageFiles] = useState<(File | null)[]>([null, null, null]);
+  const [imagePreviews, setImagePreviews] = useState<(string | null)[]>([null, null, null]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -77,6 +83,50 @@ const AdminProducts = () => {
     }
   };
 
+  const handleImageChange = (index: number, file: File | null) => {
+    const newImageFiles = [...imageFiles];
+    const newImagePreviews = [...imagePreviews];
+    
+    newImageFiles[index] = file;
+    
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newImagePreviews[index] = reader.result as string;
+        setImagePreviews(newImagePreviews);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      newImagePreviews[index] = null;
+      setImagePreviews(newImagePreviews);
+    }
+    
+    setImageFiles(newImageFiles);
+  };
+
+  const uploadImage = async (file: File, productId: string, index: number): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${productId}_${index}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      return null;
+    }
+  };
+
   const loadProducts = async () => {
     const { data, error } = await supabase
       .from('products')
@@ -92,36 +142,72 @@ const AdminProducts = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const { error } = await supabase.from('products').insert({
-      name: formData.name,
-      description: formData.description,
-      size: formData.size || null,
-      category: formData.category || null,
-      brand: formData.brand || null,
-      cost_price_usd: formData.cost_price_usd ? parseFloat(formData.cost_price_usd) : null,
-      cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
-      cost_date: format(costDate, 'yyyy-MM-dd'),
-      price: parseFloat(formData.price),
-    });
+    setUploadingImages(true);
 
-    if (error) {
-      toast.error('Erro ao criar produto');
-    } else {
+    try {
+      // First create the product
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .insert({
+          name: formData.name,
+          description: formData.description,
+          size: formData.size || null,
+          category: formData.category || null,
+          brand: formData.brand || null,
+          cost_price_usd: formData.cost_price_usd ? parseFloat(formData.cost_price_usd) : null,
+          cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
+          cost_date: format(costDate, 'yyyy-MM-dd'),
+          price: parseFloat(formData.price),
+        })
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      // Upload images
+      const imageUrls: (string | null)[] = [null, null, null];
+      for (let i = 0; i < imageFiles.length; i++) {
+        if (imageFiles[i]) {
+          const url = await uploadImage(imageFiles[i]!, product.id, i + 1);
+          imageUrls[i] = url;
+        }
+      }
+
+      // Update product with image URLs
+      const updateData: any = {};
+      if (imageUrls[0]) updateData.image_url = imageUrls[0];
+      if (imageUrls[1]) updateData.image_url_2 = imageUrls[1];
+      if (imageUrls[2]) updateData.image_url_3 = imageUrls[2];
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+          .from('products')
+          .update(updateData)
+          .eq('id', product.id);
+
+        if (updateError) throw updateError;
+      }
+
       toast.success('Produto criado com sucesso!');
       setOpen(false);
-      setFormData({ 
-        name: '', 
-        description: '', 
+      setFormData({
+        name: '',
+        description: '',
         size: '',
-        category: '', 
-        brand: '', 
+        category: '',
+        brand: '',
         cost_price_usd: '',
         cost_price: '',
-        price: '' 
+        price: '',
       });
+      setImageFiles([null, null, null]);
+      setImagePreviews([null, null, null]);
       setCostDate(new Date());
       loadProducts();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao criar produto');
+    } finally {
+      setUploadingImages(false);
     }
   };
 
@@ -285,8 +371,39 @@ const AdminProducts = () => {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loadingRate}>
-                {loadingRate ? 'Carregando cotação...' : 'Criar Produto'}
+              <div className="space-y-2">
+                <Label>Fotos do Produto (até 3)</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  {[0, 1, 2].map((index) => (
+                    <div key={index} className="space-y-2">
+                      <Label htmlFor={`image-${index}`} className="text-sm text-muted-foreground">
+                        Foto {index + 1}
+                      </Label>
+                      <div className="flex flex-col gap-2">
+                        {imagePreviews[index] && (
+                          <div className="relative w-full aspect-square rounded-lg overflow-hidden border">
+                            <img
+                              src={imagePreviews[index]!}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <Input
+                          id={`image-${index}`}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleImageChange(index, e.target.files?.[0] || null)}
+                          className="cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loadingRate || uploadingImages}>
+                {uploadingImages ? 'Enviando imagens...' : loadingRate ? 'Carregando cotação...' : 'Criar Produto'}
               </Button>
             </form>
           </DialogContent>
@@ -297,6 +414,7 @@ const AdminProducts = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Imagem</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Tamanho</TableHead>
               <TableHead>Categoria</TableHead>
@@ -316,6 +434,19 @@ const AdminProducts = () => {
               
               return (
                 <TableRow key={product.id}>
+                  <TableCell>
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs">
+                        Sem foto
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.size || '-'}</TableCell>
                   <TableCell>{product.category || '-'}</TableCell>
