@@ -18,10 +18,13 @@ const Auth = () => {
   // Redirect after login based on role
   useEffect(() => {
     if (!loading && user && !loginLoading) {
+      console.log('🔍 Auth redirect - user:', user.email, 'isAdmin:', isAdmin, 'loading:', loading);
       if (isAdmin) {
-        navigate('/admin');
+        console.log('✅ Redirecionando ADMIN para /admin');
+        navigate('/admin', { replace: true });
       } else {
-        navigate('/minha-conta');
+        console.log('👤 Redirecionando USER para /minha-conta');
+        navigate('/minha-conta', { replace: true });
       }
     }
   }, [user, isAdmin, loading, loginLoading, navigate]);

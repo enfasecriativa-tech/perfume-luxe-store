@@ -10,13 +10,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, isAdmin, loading, checkingRole } = useAuth();
   const [timeoutElapsed, setTimeoutElapsed] = useState(false);
 
-  // Timeout de segurança (10 segundos)
+  // Timeout de segurança (5 segundos - mesmo do useAuth)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (loading || checkingRole) {
         setTimeoutElapsed(true);
       }
-    }, 10000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [loading, checkingRole]);

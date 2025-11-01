@@ -36,28 +36,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (session?.user) {
           if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-            setLoading(true);
-            await checkAdminRole(session.user.id);
+            // Só verifica role se não estiver já verificando
+            if (!checkingRoleRef.current) {
+              console.log('🔐 Evento de auth:', event, 'userId:', session.user.id);
+              setLoading(true);
+              checkAdminRole(session.user.id).catch((err) => {
+                console.error('Erro ao verificar role:', err);
+                setLoading(false);
+                setCheckingRole(false);
+                checkingRoleRef.current = false;
+              });
+            } else {
+              console.log('⏭️ Role já sendo verificado, ignorando evento:', event);
+            }
           } else if (event === 'SIGNED_OUT') {
             setIsAdmin(false);
             setLoading(false);
+            checkingRoleRef.current = false;
           } else {
-            // TOKEN_REFRESHED or other background events: do not block UI
+            // TOKEN_REFRESHED or other background events: não bloqueia UI
+            console.log('🔄 Evento de auth:', event, '- ignorando (background)');
           }
         } else {
           setIsAdmin(false);
           setLoading(false);
+          checkingRoleRef.current = false;
         }
       }
     );
 
-    // Timeout de segurança para garantir que loading não fique preso
+    // Timeout de segurança para garantir que loading não fique preso (5s = RPC timeout 2s + query timeout 3s)
     const loadingTimeout = setTimeout(() => {
-      console.warn('⚠️ Timeout de loading - forçando finalização após 10s');
+      console.warn('⚠️ Timeout de loading - forçando finalização após 5s');
       setLoading(false);
       setCheckingRole(false);
       checkingRoleRef.current = false;
-    }, 10000); // 10 segundos máximo
+    }, 5000); // 5 segundos máximo
 
     supabase.auth.getSession()
       .then(({ data: { session }, error: sessionError }) => {
@@ -138,21 +152,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('🔍 Verificando role para userId:', userId);
       const startTime = Date.now();
       
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .single();
+      // Método 1: Usa função has_role existente (mais rápido e confiável) com timeout de 2s
+      let isAdminResult = false;
+      try {
+        const rpcPromise = supabase
+          .rpc('has_role', { 
+            _user_id: userId,
+            _role: 'admin'
+          });
+        
+        const rpcTimeout = new Promise<{ data: false; error: { message: string } }>((resolve) => {
+          setTimeout(() => {
+            resolve({ data: false, error: { message: 'RPC timeout após 2 segundos' } });
+          }, 2000);
+        });
+
+        const { data: hasRoleData, error: hasRoleError } = await Promise.race([rpcPromise, rpcTimeout]);
+        
+        if (!hasRoleError && hasRoleData === true) {
+          isAdminResult = true;
+          console.log('✅ has_role RPC retornou true');
+        } else if (hasRoleError?.message?.includes('timeout')) {
+          console.warn('⏰ RPC has_role deu timeout (2s), tentando query direta...');
+        } else {
+          console.log('📞 has_role RPC:', hasRoleData, 'erro:', hasRoleError?.message);
+        }
+      } catch (rpcErr: any) {
+        console.warn('⚠️ RPC has_role falhou, tentando query direta:', rpcErr?.message);
+      }
+
+      // Método 2: Query direta rápida com timeout de 3s
+      if (!isAdminResult) {
+        const queryPromise = supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
+          setTimeout(() => {
+            resolve({ data: null, error: { message: 'Query timeout após 3 segundos' } });
+          }, 3000);
+        });
+
+        try {
+          const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+          if (!error && data) {
+            isAdminResult = true;
+            console.log('✅ Query direta encontrou role admin');
+          } else if (error?.message?.includes('timeout')) {
+            console.warn('⏰ Query direta deu timeout (3s)');
+          } else {
+            console.log('❌ Query direta não encontrou role:', error?.message);
+          }
+        } catch (queryErr: any) {
+          console.warn('⚠️ Query direta falhou:', queryErr?.message);
+        }
+      }
 
       const duration = Date.now() - startTime;
-      console.log(`⏱️ Query concluída em ${duration}ms`, { data, error });
+      console.log(`⏱️ Verificação concluída em ${duration}ms`);
 
-      if (!error && data) {
+      // Define resultado
+      if (isAdminResult) {
         console.log('✅ Usuário é ADMIN');
         setIsAdmin(true);
       } else {
-        console.log('❌ Usuário NÃO é admin:', error?.message || 'Sem role admin');
+        console.log('❌ Usuário NÃO é admin');
         setIsAdmin(false);
       }
     } catch (error) {

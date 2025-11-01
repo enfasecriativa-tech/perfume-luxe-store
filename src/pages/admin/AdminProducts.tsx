@@ -371,12 +371,31 @@ const AdminProducts = () => {
                   placeholder="0.00"
                   required
                 />
-                {profitMargin > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant={profitMargin >= 50 ? "default" : profitMargin >= 30 ? "secondary" : "destructive"}>
-                      Margem de Lucro: {profitMargin.toFixed(2)}%
+                {formData.price && formData.cost_price && parseFloat(formData.price) > 0 && parseFloat(formData.cost_price) > 0 && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-sm text-muted-foreground">Lucro:</span>
+                    <Badge 
+                      variant={
+                        profitMargin >= 50 ? "default" : 
+                        profitMargin >= 30 ? "secondary" : 
+                        profitMargin >= 0 ? "outline" : 
+                        "destructive"
+                      }
+                      className={
+                        profitMargin >= 50 ? "bg-green-500 text-white" : 
+                        profitMargin >= 30 ? "bg-blue-500 text-white" : 
+                        profitMargin >= 0 ? "" : 
+                        "bg-red-500 text-white"
+                      }
+                    >
+                      {profitMargin >= 0 ? '+' : ''}{profitMargin.toFixed(2)}%
                     </Badge>
                   </div>
+                )}
+                {formData.price && (!formData.cost_price || parseFloat(formData.cost_price) <= 0) && (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    Informe o preço de custo para calcular o lucro
+                  </p>
                 )}
               </div>
 
