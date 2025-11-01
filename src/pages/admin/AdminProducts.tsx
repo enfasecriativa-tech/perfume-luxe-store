@@ -15,21 +15,25 @@ import { ptBR } from 'date-fns/locale';
 import { fetchExchangeRate, calculateProfitMargin } from '@/lib/exchangeRate';
 import { Badge } from '@/components/ui/badge';
 
+interface ProductVariant {
+  id?: string;
+  size: string;
+  cost_price_usd: string;
+  cost_price: string;
+  price: string;
+}
+
 interface Product {
   id: string;
   name: string;
   description: string | null;
-  price: number;
-  cost_price: number | null;
-  cost_price_usd: number | null;
-  cost_date: string | null;
-  size: string | null;
   category: string | null;
   brand: string | null;
   image_url: string | null;
   image_url_2: string | null;
   image_url_3: string | null;
   is_active: boolean;
+  variants?: ProductVariant[];
 }
 
 const AdminProducts = () => {
@@ -41,15 +45,14 @@ const AdminProducts = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [imageFiles, setImageFiles] = useState<(File | null)[]>([null, null, null]);
   const [imagePreviews, setImagePreviews] = useState<(string | null)[]>([null, null, null]);
+  const [variants, setVariants] = useState<ProductVariant[]>([
+    { size: '', cost_price_usd: '', cost_price: '', price: '' }
+  ]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    size: '',
     category: '',
     brand: '',
-    cost_price_usd: '',
-    cost_price: '',
-    price: '',
   });
 
   useEffect(() => {
@@ -58,11 +61,16 @@ const AdminProducts = () => {
   }, []);
 
   useEffect(() => {
-    if (formData.cost_price_usd && exchangeRate) {
-      const costBRL = parseFloat(formData.cost_price_usd) * exchangeRate;
-      setFormData(prev => ({ ...prev, cost_price: costBRL.toFixed(2) }));
+    if (exchangeRate) {
+      setVariants(prev => prev.map(variant => {
+        if (variant.cost_price_usd && parseFloat(variant.cost_price_usd) > 0) {
+          const costBRL = parseFloat(variant.cost_price_usd) * exchangeRate;
+          return { ...variant, cost_price: costBRL.toFixed(2) };
+        }
+        return variant;
+      }));
     }
-  }, [formData.cost_price_usd, exchangeRate]);
+  }, [exchangeRate]);
 
   const loadExchangeRate = async (date: Date) => {
     setLoadingRate(true);
@@ -134,37 +142,89 @@ const AdminProducts = () => {
   };
 
   const loadProducts = async () => {
-    const { data, error } = await supabase
+    const { data: productsData, error: productsError } = await supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
+    if (productsError) {
       toast.error('Erro ao carregar produtos');
-    } else {
-      setProducts((data || []) as unknown as Product[]);
+      return;
     }
+
+    // Load variants for each product
+    const { data: variantsData, error: variantsError } = await supabase
+      .from('product_variants')
+      .select('*')
+      .order('price', { ascending: true });
+
+    if (variantsError) {
+      toast.error('Erro ao carregar variações');
+      return;
+    }
+
+    // Group variants by product_id
+    const productsWithVariants = (productsData || []).map(product => ({
+      ...product,
+      variants: (variantsData || [])
+        .filter(v => v.product_id === product.id)
+        .map(v => ({
+          id: v.id,
+          size: v.size,
+          cost_price_usd: v.cost_price_usd?.toString() || '',
+          cost_price: v.cost_price?.toString() || '',
+          price: v.price?.toString() || '',
+        }))
+    }));
+
+    setProducts(productsWithVariants as Product[]);
+  };
+
+  const addVariant = () => {
+    setVariants([...variants, { size: '', cost_price_usd: '', cost_price: '', price: '' }]);
+  };
+
+  const removeVariant = (index: number) => {
+    if (variants.length > 1) {
+      setVariants(variants.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateVariant = (index: number, field: keyof ProductVariant, value: string) => {
+    const newVariants = [...variants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    
+    // Auto-calculate cost_price when cost_price_usd changes
+    if (field === 'cost_price_usd' && exchangeRate && value) {
+      const costBRL = parseFloat(value) * exchangeRate;
+      newVariants[index].cost_price = costBRL.toFixed(2);
+    }
+    
+    setVariants(newVariants);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate at least one variant with required fields
+    const validVariants = variants.filter(v => v.size && v.price && parseFloat(v.price) > 0);
+    if (validVariants.length === 0) {
+      toast.error('Adicione pelo menos uma variação com tamanho e preço');
+      return;
+    }
+    
     setUploadingImages(true);
 
     try {
       // First create the product
       const { data: product, error: productError } = await supabase
         .from('products')
-        .insert({
+        .insert([{
           name: formData.name,
-          description: formData.description,
-          size: formData.size || null,
+          description: formData.description || null,
           category: formData.category || null,
           brand: formData.brand || null,
-          cost_price_usd: formData.cost_price_usd ? parseFloat(formData.cost_price_usd) : null,
-          cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
-          cost_date: format(costDate, 'yyyy-MM-dd'),
-          price: parseFloat(formData.price),
-        })
+        }])
         .select()
         .single();
 
@@ -194,18 +254,30 @@ const AdminProducts = () => {
         if (updateError) throw updateError;
       }
 
+      // Create product variants
+      const variantsToInsert = validVariants.map(variant => ({
+        product_id: product.id,
+        size: variant.size,
+        cost_price_usd: variant.cost_price_usd ? parseFloat(variant.cost_price_usd) : null,
+        cost_price: variant.cost_price ? parseFloat(variant.cost_price) : null,
+        price: parseFloat(variant.price),
+      }));
+
+      const { error: variantsError } = await supabase
+        .from('product_variants')
+        .insert(variantsToInsert);
+
+      if (variantsError) throw variantsError;
+
       toast.success('Produto criado com sucesso!');
       setOpen(false);
       setFormData({
         name: '',
         description: '',
-        size: '',
         category: '',
         brand: '',
-        cost_price_usd: '',
-        cost_price: '',
-        price: '',
       });
+      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '' }]);
       setImageFiles([null, null, null]);
       setImagePreviews([null, null, null]);
       setCostDate(new Date());
@@ -217,9 +289,10 @@ const AdminProducts = () => {
     }
   };
 
-  const profitMargin = formData.price && formData.cost_price 
-    ? calculateProfitMargin(parseFloat(formData.price), parseFloat(formData.cost_price))
-    : 0;
+  const calculateVariantMargin = (price: string, costPrice: string) => {
+    if (!price || !costPrice || parseFloat(price) <= 0 || parseFloat(costPrice) <= 0) return 0;
+    return calculateProfitMargin(parseFloat(price), parseFloat(costPrice));
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este produto?')) return;
@@ -272,7 +345,7 @@ const AdminProducts = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Categoria</Label>
                   <Input
@@ -289,15 +362,6 @@ const AdminProducts = () => {
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     placeholder="Ex: Dior"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="size">Tamanho</Label>
-                  <Input
-                    id="size"
-                    value={formData.size}
-                    onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                    placeholder="Ex: 100ml"
                   />
                 </div>
               </div>
@@ -332,71 +396,101 @@ const AdminProducts = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cost_price_usd">Preço de Custo (US$) *</Label>
-                  <Input
-                    id="cost_price_usd"
-                    type="number"
-                    step="0.01"
-                    value={formData.cost_price_usd}
-                    onChange={(e) => setFormData({ ...formData, cost_price_usd: e.target.value })}
-                    placeholder="0.00"
-                    required
-                    disabled={loadingRate}
-                  />
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-base font-semibold">Variações de Tamanho e Preço *</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addVariant}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar Variação
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cost_price">Preço de Custo (R$)</Label>
-                  <Input
-                    id="cost_price"
-                    type="number"
-                    step="0.01"
-                    value={formData.cost_price}
-                    disabled
-                    placeholder="Calculado automaticamente"
-                    className="bg-muted"
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price">Preço de Venda (R$) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder="0.00"
-                  required
-                />
-                {formData.price && formData.cost_price && parseFloat(formData.price) > 0 && parseFloat(formData.cost_price) > 0 && (
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-sm text-muted-foreground">Lucro:</span>
-                    <Badge 
-                      variant={
-                        profitMargin >= 50 ? "default" : 
-                        profitMargin >= 30 ? "secondary" : 
-                        profitMargin >= 0 ? "outline" : 
-                        "destructive"
-                      }
-                      className={
-                        profitMargin >= 50 ? "bg-green-500 text-white" : 
-                        profitMargin >= 30 ? "bg-blue-500 text-white" : 
-                        profitMargin >= 0 ? "" : 
-                        "bg-red-500 text-white"
-                      }
-                    >
-                      {profitMargin >= 0 ? '+' : ''}{profitMargin.toFixed(2)}%
-                    </Badge>
-                  </div>
-                )}
-                {formData.price && (!formData.cost_price || parseFloat(formData.cost_price) <= 0) && (
-                  <p className="text-xs text-muted-foreground pt-1">
-                    Informe o preço de custo para calcular o lucro
-                  </p>
-                )}
+                {variants.map((variant, index) => {
+                  const margin = calculateVariantMargin(variant.price, variant.cost_price);
+                  
+                  return (
+                    <div key={index} className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Variação {index + 1}</span>
+                        {variants.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeVariant(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`size-${index}`}>Tamanho *</Label>
+                        <Input
+                          id={`size-${index}`}
+                          value={variant.size}
+                          onChange={(e) => updateVariant(index, 'size', e.target.value)}
+                          placeholder="Ex: 50ml, 100ml, 200ml"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor={`cost_usd-${index}`}>Custo (US$) *</Label>
+                          <Input
+                            id={`cost_usd-${index}`}
+                            type="number"
+                            step="0.01"
+                            value={variant.cost_price_usd}
+                            onChange={(e) => updateVariant(index, 'cost_price_usd', e.target.value)}
+                            placeholder="0.00"
+                            disabled={loadingRate}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`cost_brl-${index}`}>Custo (R$)</Label>
+                          <Input
+                            id={`cost_brl-${index}`}
+                            type="number"
+                            step="0.01"
+                            value={variant.cost_price}
+                            disabled
+                            placeholder="Auto"
+                            className="bg-muted"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`price-${index}`}>Preço de Venda (R$) *</Label>
+                        <Input
+                          id={`price-${index}`}
+                          type="number"
+                          step="0.01"
+                          value={variant.price}
+                          onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                          placeholder="0.00"
+                        />
+                        {variant.price && variant.cost_price && parseFloat(variant.price) > 0 && parseFloat(variant.cost_price) > 0 && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <span className="text-sm text-muted-foreground">Margem:</span>
+                            <Badge 
+                              variant={margin >= 50 ? "default" : margin >= 30 ? "secondary" : margin >= 0 ? "outline" : "destructive"}
+                              className={
+                                margin >= 50 ? "bg-green-500 text-white" : 
+                                margin >= 30 ? "bg-blue-500 text-white" : 
+                                margin >= 0 ? "" : 
+                                "bg-red-500 text-white"
+                              }
+                            >
+                              {margin >= 0 ? '+' : ''}{margin.toFixed(1)}%
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="space-y-2">
@@ -444,22 +538,15 @@ const AdminProducts = () => {
             <TableRow>
               <TableHead>Imagem</TableHead>
               <TableHead>Nome</TableHead>
-              <TableHead>Tamanho</TableHead>
+              <TableHead>Variações</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Marca</TableHead>
-              <TableHead>Custo (R$)</TableHead>
-              <TableHead>Venda (R$)</TableHead>
-              <TableHead>Margem</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((product) => {
-              const margin = product.cost_price 
-                ? calculateProfitMargin(Number(product.price), Number(product.cost_price))
-                : 0;
-              
               return (
                 <TableRow key={product.id}>
                   <TableCell>
@@ -476,20 +563,35 @@ const AdminProducts = () => {
                     )}
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.size || '-'}</TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {product.variants && product.variants.length > 0 ? (
+                        product.variants.map((variant, idx) => {
+                          const margin = calculateVariantMargin(variant.price, variant.cost_price);
+                          return (
+                            <div key={idx} className="flex items-center gap-2 text-sm">
+                              <span className="font-medium">{variant.size}</span>
+                              <span className="text-muted-foreground">
+                                R$ {parseFloat(variant.price).toFixed(2)}
+                              </span>
+                              {margin > 0 && (
+                                <Badge 
+                                  variant={margin >= 50 ? "default" : margin >= 30 ? "secondary" : "outline"}
+                                  className="text-xs"
+                                >
+                                  {margin.toFixed(0)}%
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <span className="text-muted-foreground">Sem variações</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{product.category || '-'}</TableCell>
                   <TableCell>{product.brand || '-'}</TableCell>
-                  <TableCell>
-                    {product.cost_price ? `R$ ${Number(product.cost_price).toFixed(2)}` : '-'}
-                  </TableCell>
-                  <TableCell>R$ {Number(product.price).toFixed(2)}</TableCell>
-                  <TableCell>
-                    {margin > 0 && (
-                      <Badge variant={margin >= 50 ? "default" : margin >= 30 ? "secondary" : "destructive"}>
-                        {margin.toFixed(1)}%
-                      </Badge>
-                    )}
-                  </TableCell>
                   <TableCell>{product.is_active ? 'Ativo' : 'Inativo'}</TableCell>
                   <TableCell className="text-right">
                     <Button

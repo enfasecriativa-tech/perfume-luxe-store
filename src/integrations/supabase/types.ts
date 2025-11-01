@@ -169,6 +169,50 @@ export type Database = {
           },
         ]
       }
+      product_variants: {
+        Row: {
+          cost_price: number | null
+          cost_price_usd: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          price: number
+          product_id: string
+          size: string
+          updated_at: string | null
+        }
+        Insert: {
+          cost_price?: number | null
+          cost_price_usd?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          price: number
+          product_id: string
+          size: string
+          updated_at?: string | null
+        }
+        Update: {
+          cost_price?: number | null
+          cost_price_usd?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          price?: number
+          product_id?: string
+          size?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand: string | null
@@ -409,6 +453,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_current_user_role: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
