@@ -224,6 +224,7 @@ const AdminProducts = () => {
           description: formData.description || null,
           category: formData.category || null,
           brand: formData.brand || null,
+          price: null as any, // Now using product_variants for pricing
         }])
         .select()
         .single();
