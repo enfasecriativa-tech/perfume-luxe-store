@@ -319,7 +319,10 @@ const AdminProducts = () => {
               Novo Produto
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent 
+            onInteractOutside={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>Novo Produto</DialogTitle>
               <DialogDescription>
