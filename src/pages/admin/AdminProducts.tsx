@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -39,6 +39,7 @@ interface Product {
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [open, setOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [costDate, setCostDate] = useState<Date>(new Date());
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [loadingRate, setLoadingRate] = useState(false);
@@ -216,62 +217,116 @@ const AdminProducts = () => {
     setUploadingImages(true);
 
     try {
-      // First create the product
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert([{
+      if (editingProduct) {
+        // Update existing product
+        const updateData: any = {
           name: formData.name,
           description: formData.description || null,
           category: formData.category || null,
           brand: formData.brand || null,
-          price: null as any, // Now using product_variants for pricing
-        }])
-        .select()
-        .single();
+        };
 
-      if (productError) throw productError;
-
-      // Upload images
-      const imageUrls: (string | null)[] = [null, null, null];
-      for (let i = 0; i < imageFiles.length; i++) {
-        if (imageFiles[i]) {
-          const url = await uploadImage(imageFiles[i]!, product.id, i + 1);
-          imageUrls[i] = url;
+        // Upload new images if provided
+        for (let i = 0; i < imageFiles.length; i++) {
+          if (imageFiles[i]) {
+            const url = await uploadImage(imageFiles[i]!, editingProduct.id, i + 1);
+            if (i === 0) updateData.image_url = url;
+            if (i === 1) updateData.image_url_2 = url;
+            if (i === 2) updateData.image_url_3 = url;
+          }
         }
-      }
 
-      // Update product with image URLs
-      const updateData: any = {};
-      if (imageUrls[0]) updateData.image_url = imageUrls[0];
-      if (imageUrls[1]) updateData.image_url_2 = imageUrls[1];
-      if (imageUrls[2]) updateData.image_url_3 = imageUrls[2];
-
-      if (Object.keys(updateData).length > 0) {
         const { error: updateError } = await supabase
           .from('products')
           .update(updateData)
-          .eq('id', product.id);
+          .eq('id', editingProduct.id);
 
         if (updateError) throw updateError;
+
+        // Delete existing variants
+        const { error: deleteVariantsError } = await supabase
+          .from('product_variants')
+          .delete()
+          .eq('product_id', editingProduct.id);
+
+        if (deleteVariantsError) throw deleteVariantsError;
+
+        // Create new variants
+        const variantsToInsert = validVariants.map(variant => ({
+          product_id: editingProduct.id,
+          size: variant.size,
+          cost_price_usd: variant.cost_price_usd ? parseFloat(variant.cost_price_usd) : null,
+          cost_price: variant.cost_price ? parseFloat(variant.cost_price) : null,
+          price: parseFloat(variant.price),
+        }));
+
+        const { error: variantsError } = await supabase
+          .from('product_variants')
+          .insert(variantsToInsert);
+
+        if (variantsError) throw variantsError;
+
+        toast.success('Produto atualizado com sucesso!');
+      } else {
+        // Create new product
+        const { data: product, error: productError } = await supabase
+          .from('products')
+          .insert([{
+            name: formData.name,
+            description: formData.description || null,
+            category: formData.category || null,
+            brand: formData.brand || null,
+            price: null as any, // Now using product_variants for pricing
+          }])
+          .select()
+          .single();
+
+        if (productError) throw productError;
+
+        // Upload images
+        const imageUrls: (string | null)[] = [null, null, null];
+        for (let i = 0; i < imageFiles.length; i++) {
+          if (imageFiles[i]) {
+            const url = await uploadImage(imageFiles[i]!, product.id, i + 1);
+            imageUrls[i] = url;
+          }
+        }
+
+        // Update product with image URLs
+        const updateData: any = {};
+        if (imageUrls[0]) updateData.image_url = imageUrls[0];
+        if (imageUrls[1]) updateData.image_url_2 = imageUrls[1];
+        if (imageUrls[2]) updateData.image_url_3 = imageUrls[2];
+
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateError } = await supabase
+            .from('products')
+            .update(updateData)
+            .eq('id', product.id);
+
+          if (updateError) throw updateError;
+        }
+
+        // Create product variants
+        const variantsToInsert = validVariants.map(variant => ({
+          product_id: product.id,
+          size: variant.size,
+          cost_price_usd: variant.cost_price_usd ? parseFloat(variant.cost_price_usd) : null,
+          cost_price: variant.cost_price ? parseFloat(variant.cost_price) : null,
+          price: parseFloat(variant.price),
+        }));
+
+        const { error: variantsError } = await supabase
+          .from('product_variants')
+          .insert(variantsToInsert);
+
+        if (variantsError) throw variantsError;
+
+        toast.success('Produto criado com sucesso!');
       }
-
-      // Create product variants
-      const variantsToInsert = validVariants.map(variant => ({
-        product_id: product.id,
-        size: variant.size,
-        cost_price_usd: variant.cost_price_usd ? parseFloat(variant.cost_price_usd) : null,
-        cost_price: variant.cost_price ? parseFloat(variant.cost_price) : null,
-        price: parseFloat(variant.price),
-      }));
-
-      const { error: variantsError } = await supabase
-        .from('product_variants')
-        .insert(variantsToInsert);
-
-      if (variantsError) throw variantsError;
-
-      toast.success('Produto criado com sucesso!');
+      
       setOpen(false);
+      setEditingProduct(null);
       setFormData({
         name: '',
         description: '',
@@ -284,7 +339,7 @@ const AdminProducts = () => {
       setCostDate(new Date());
       loadProducts();
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao criar produto');
+      toast.error(error.message || `Erro ao ${editingProduct ? 'atualizar' : 'criar'} produto`);
     } finally {
       setUploadingImages(false);
     }
@@ -293,6 +348,34 @@ const AdminProducts = () => {
   const calculateVariantMargin = (price: string, costPrice: string) => {
     if (!price || !costPrice || parseFloat(price) <= 0 || parseFloat(costPrice) <= 0) return 0;
     return calculateProfitMargin(parseFloat(price), parseFloat(costPrice));
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description || '',
+      category: product.category || '',
+      brand: product.brand || '',
+    });
+    
+    // Load variants
+    if (product.variants && product.variants.length > 0) {
+      setVariants(product.variants);
+    } else {
+      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '' }]);
+    }
+    
+    // Set image previews
+    const previews: (string | null)[] = [
+      product.image_url || null,
+      product.image_url_2 || null,
+      product.image_url_3 || null,
+    ];
+    setImagePreviews(previews);
+    setImageFiles([null, null, null]);
+    
+    setOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -308,11 +391,28 @@ const AdminProducts = () => {
     }
   };
 
+  const handleDialogClose = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setEditingProduct(null);
+      setFormData({
+        name: '',
+        description: '',
+        category: '',
+        brand: '',
+      });
+      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '' }]);
+      setImageFiles([null, null, null]);
+      setImagePreviews([null, null, null]);
+      setCostDate(new Date());
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Produtos</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleDialogClose}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -324,9 +424,9 @@ const AdminProducts = () => {
             onPointerDownOutside={(e) => e.preventDefault()}
           >
             <DialogHeader>
-              <DialogTitle>Novo Produto</DialogTitle>
+              <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
               <DialogDescription>
-                Preencha os dados do produto. O preço em R$ será calculado automaticamente com base na cotação do dólar.
+                {editingProduct ? 'Atualize os dados do produto.' : 'Preencha os dados do produto. O preço em R$ será calculado automaticamente com base na cotação do dólar.'}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
@@ -598,13 +698,22 @@ const AdminProducts = () => {
                   <TableCell>{product.brand || '-'}</TableCell>
                   <TableCell>{product.is_active ? 'Ativo' : 'Inativo'}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(product.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(product)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(product.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
