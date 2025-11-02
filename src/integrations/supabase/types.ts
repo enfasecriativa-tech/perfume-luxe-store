@@ -176,6 +176,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_sold_out: boolean
           price: number
           product_id: string
           size: string
@@ -187,6 +188,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_sold_out?: boolean
           price: number
           product_id: string
           size: string
@@ -198,6 +200,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_sold_out?: boolean
           price?: number
           product_id?: string
           size?: string

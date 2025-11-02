@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Trash2, Calendar, DollarSign, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
@@ -21,6 +22,7 @@ interface ProductVariant {
   cost_price_usd: string;
   cost_price: string;
   price: string;
+  is_sold_out?: boolean;
 }
 
 interface Product {
@@ -47,7 +49,7 @@ const AdminProducts = () => {
   const [imageFiles, setImageFiles] = useState<(File | null)[]>([null, null, null]);
   const [imagePreviews, setImagePreviews] = useState<(string | null)[]>([null, null, null]);
   const [variants, setVariants] = useState<ProductVariant[]>([
-    { size: '', cost_price_usd: '', cost_price: '', price: '' }
+    { size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }
   ]);
   const [formData, setFormData] = useState({
     name: '',
@@ -175,6 +177,7 @@ const AdminProducts = () => {
           cost_price_usd: v.cost_price_usd?.toString() || '',
           cost_price: v.cost_price?.toString() || '',
           price: v.price?.toString() || '',
+          is_sold_out: v.is_sold_out || false,
         }))
     }));
 
@@ -182,7 +185,7 @@ const AdminProducts = () => {
   };
 
   const addVariant = () => {
-    setVariants([...variants, { size: '', cost_price_usd: '', cost_price: '', price: '' }]);
+    setVariants([...variants, { size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
   };
 
   const removeVariant = (index: number) => {
@@ -193,7 +196,12 @@ const AdminProducts = () => {
 
   const updateVariant = (index: number, field: keyof ProductVariant, value: string) => {
     const newVariants = [...variants];
-    newVariants[index] = { ...newVariants[index], [field]: value };
+    
+    if (field === 'is_sold_out') {
+      newVariants[index] = { ...newVariants[index], is_sold_out: value === 'true' };
+    } else {
+      newVariants[index] = { ...newVariants[index], [field]: value };
+    }
     
     // Auto-calculate cost_price when cost_price_usd changes
     if (field === 'cost_price_usd' && exchangeRate && value) {
@@ -258,6 +266,7 @@ const AdminProducts = () => {
           cost_price_usd: variant.cost_price_usd ? parseFloat(variant.cost_price_usd) : null,
           cost_price: variant.cost_price ? parseFloat(variant.cost_price) : null,
           price: parseFloat(variant.price),
+          is_sold_out: variant.is_sold_out || false,
         }));
 
         const { error: variantsError } = await supabase
@@ -314,6 +323,7 @@ const AdminProducts = () => {
           cost_price_usd: variant.cost_price_usd ? parseFloat(variant.cost_price_usd) : null,
           cost_price: variant.cost_price ? parseFloat(variant.cost_price) : null,
           price: parseFloat(variant.price),
+          is_sold_out: variant.is_sold_out || false,
         }));
 
         const { error: variantsError } = await supabase
@@ -333,7 +343,7 @@ const AdminProducts = () => {
         category: '',
         brand: '',
       });
-      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '' }]);
+      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
       setImageFiles([null, null, null]);
       setImagePreviews([null, null, null]);
       setCostDate(new Date());
@@ -363,7 +373,7 @@ const AdminProducts = () => {
     if (product.variants && product.variants.length > 0) {
       setVariants(product.variants);
     } else {
-      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '' }]);
+      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
     }
     
     // Set image previews
@@ -401,7 +411,7 @@ const AdminProducts = () => {
         category: '',
         brand: '',
       });
-      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '' }]);
+      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
       setImageFiles([null, null, null]);
       setImagePreviews([null, null, null]);
       setCostDate(new Date());
@@ -591,6 +601,22 @@ const AdminProducts = () => {
                             </Badge>
                           </div>
                         )}
+                      </div>
+
+                      <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox
+                          id={`sold-out-${index}`}
+                          checked={variant.is_sold_out || false}
+                          onCheckedChange={(checked) => 
+                            updateVariant(index, 'is_sold_out', checked ? 'true' : 'false')
+                          }
+                        />
+                        <Label 
+                          htmlFor={`sold-out-${index}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          Produto Esgotado
+                        </Label>
                       </div>
                     </div>
                   );

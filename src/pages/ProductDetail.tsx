@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -7,27 +7,115 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Share2, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import product1 from "@/assets/product-1.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface ProductVariant {
+  id: string;
+  size: string;
+  price: number;
+  is_sold_out: boolean;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  brand: string | null;
+  description: string | null;
+  image_url: string | null;
+  image_url_2: string | null;
+  image_url_3: string | null;
+  variants: ProductVariant[];
+}
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const [selectedSize, setSelectedSize] = useState("200ml");
+  const [product, setProduct] = useState<Product | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [zipCode, setZipCode] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const sizes = [
-    { value: "50ml", label: "50 ML", available: false },
-    { value: "100ml", label: "100 ML", available: false },
-    { value: "200ml", label: "200 ML", available: true },
-  ];
+  useEffect(() => {
+    if (id) {
+      loadProduct();
+    }
+  }, [id]);
 
-  const product = {
-    id: id || "1",
-    brand: "Antonio Banderas",
-    name: "King Of Seduction Masculino Eau de Toilette",
-    image: product1,
-    price: 180.89,
-    installments: "ou 4x R$ 45,22",
+  const loadProduct = async () => {
+    try {
+      // Load product
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .eq('is_active', true)
+        .single();
+
+      if (productError) throw productError;
+
+      // Load variants
+      const { data: variantsData, error: variantsError } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', id)
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+
+      if (variantsError) throw variantsError;
+
+      const productWithVariants: Product = {
+        ...productData,
+        variants: (variantsData || []).map(v => ({
+          id: v.id,
+          size: v.size,
+          price: v.price,
+          is_sold_out: v.is_sold_out || false,
+        }))
+      };
+
+      setProduct(productWithVariants);
+      
+      // Select first available variant by default
+      const firstAvailable = productWithVariants.variants.find(v => !v.is_sold_out);
+      if (firstAvailable) {
+        setSelectedVariant(firstAvailable.id);
+      }
+    } catch (error) {
+      console.error('Error loading product:', error);
+      toast.error('Erro ao carregar produto');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8 flex items-center justify-center">
+          <p className="text-muted-foreground">Carregando produto...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8 flex items-center justify-center">
+          <p className="text-muted-foreground">Produto não encontrado</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const selectedVariantData = product.variants.find(v => v.id === selectedVariant);
+  const displayPrice = selectedVariantData?.price || product.variants[0]?.price || 0;
+  const installments = `ou 4x R$ ${(displayPrice / 4).toFixed(2).replace(".", ",")}`;
+  const images = [product.image_url, product.image_url_2, product.image_url_3].filter(Boolean);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -40,27 +128,29 @@ const ProductDetail = () => {
             {/* Main Image */}
             <div className="aspect-square bg-secondary rounded-lg overflow-hidden border border-border">
               <img
-                src={product.image}
+                src={images[0] || '/placeholder.svg'}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
             </div>
 
             {/* Thumbnail Images */}
-            <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <button
-                  key={i}
-                  className="aspect-square bg-secondary rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-colors"
-                >
-                  <img
-                    src={product.image}
-                    alt={`${product.name} - ${i}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+            {images.length > 1 && (
+              <div className="grid grid-cols-4 gap-4">
+                {images.slice(0, 4).map((img, i) => (
+                  <button
+                    key={i}
+                    className="aspect-square bg-secondary rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-colors"
+                  >
+                    <img
+                      src={img || '/placeholder.svg'}
+                      alt={`${product.name} - ${i + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -68,7 +158,7 @@ const ProductDetail = () => {
             {/* Brand and Share */}
             <div className="flex items-start justify-between">
               <p className="text-sm text-muted-foreground uppercase tracking-wide">
-                {product.brand}
+                {product.brand || 'Marca'}
               </p>
               <Button variant="ghost" size="sm">
                 <Share2 className="h-4 w-4 mr-2" />
@@ -82,42 +172,44 @@ const ProductDetail = () => {
             </h1>
 
             {/* Size Selection */}
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-foreground">Selecione o tamanho:</p>
-              <div className="flex gap-3">
-                {sizes.map((size) => (
-                  <button
-                    key={size.value}
-                    onClick={() => size.available && setSelectedSize(size.value)}
-                    disabled={!size.available}
-                    className={`relative flex-1 py-3 px-4 border-2 rounded-lg font-medium text-sm transition-all ${
-                      selectedSize === size.value
-                        ? "border-foreground bg-foreground text-background"
-                        : size.available
-                        ? "border-border hover:border-foreground"
-                        : "border-border bg-muted text-muted-foreground cursor-not-allowed"
-                    }`}
-                  >
-                    {size.label}
-                    {!size.available && (
-                      <Badge
-                        variant="secondary"
-                        className="absolute -top-2 -right-2 bg-muted text-muted-foreground text-xs"
-                      >
-                        ESGOTADO
-                      </Badge>
-                    )}
-                  </button>
-                ))}
+            {product.variants && product.variants.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-foreground">Selecione o tamanho:</p>
+                <div className="flex gap-3 flex-wrap">
+                  {product.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      onClick={() => !variant.is_sold_out && setSelectedVariant(variant.id)}
+                      disabled={variant.is_sold_out}
+                      className={`relative flex-1 min-w-[100px] py-3 px-4 border-2 rounded-lg font-medium text-sm transition-all ${
+                        selectedVariant === variant.id
+                          ? "border-foreground bg-foreground text-background"
+                          : !variant.is_sold_out
+                          ? "border-border hover:border-foreground"
+                          : "border-border bg-muted text-muted-foreground cursor-not-allowed"
+                      }`}
+                    >
+                      {variant.size}
+                      {variant.is_sold_out && (
+                        <Badge
+                          variant="secondary"
+                          className="absolute -top-2 -right-2 bg-muted text-muted-foreground text-xs"
+                        >
+                          ESGOTADO
+                        </Badge>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Price */}
             <div className="border-t border-b border-border py-6">
               <p className="text-3xl font-bold text-foreground mb-1">
-                R$ {product.price.toFixed(2).replace(".", ",")} <span className="text-sm font-normal text-muted-foreground">no PIX</span>
+                R$ {displayPrice.toFixed(2).replace(".", ",")} <span className="text-sm font-normal text-muted-foreground">no PIX</span>
               </p>
-              <p className="text-sm text-muted-foreground">{product.installments}</p>
+              <p className="text-sm text-muted-foreground">{installments}</p>
             </div>
 
             {/* Shipping Calculator */}
@@ -143,6 +235,7 @@ const ProductDetail = () => {
             <Button
               size="lg"
               className="w-full h-14 text-lg font-bold bg-success hover:bg-success/90"
+              disabled={!selectedVariant || product.variants.find(v => v.id === selectedVariant)?.is_sold_out}
             >
               COMPRAR
             </Button>
@@ -156,15 +249,8 @@ const ProductDetail = () => {
             <div className="border-t border-border pt-6 space-y-3">
               <h2 className="text-lg font-semibold text-foreground">Sobre o Produto</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {product.name} é uma fragrância masculina sofisticada e sedutora. Com notas de bergamota, 
-                lavanda e âmbar, este perfume é perfeito para o homem moderno que busca deixar sua marca 
-                por onde passa. Ideal para uso diário ou ocasiões especiais.
+                {product.description || `${product.name} é uma fragrância sofisticada e sedutora. Perfeita para deixar sua marca por onde passa. Ideal para uso diário ou ocasiões especiais.`}
               </p>
-              <div className="space-y-2 text-sm">
-                <p className="text-foreground"><strong>Tipo:</strong> Eau de Toilette</p>
-                <p className="text-foreground"><strong>Gênero:</strong> Masculino</p>
-                <p className="text-foreground"><strong>Família Olfativa:</strong> Oriental</p>
-              </div>
             </div>
           </div>
         </div>
