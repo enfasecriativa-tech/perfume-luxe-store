@@ -16,11 +16,14 @@ import {
 } from "./ui/dropdown-menu";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAdmin, signOut } = useAuth();
+  const { getItemCount } = useCart();
   const navigate = useNavigate();
+  const cartItemCount = getItemCount();
 
   const handleSignOut = async () => {
     await signOut();
@@ -129,9 +132,11 @@ const Header = () => {
               <Button variant="ghost" size="sm" className="gap-2 relative">
                 <ShoppingCart className="h-5 w-5" />
                 <span className="hidden lg:inline">Carrinho</span>
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  0
-                </span>
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
               </Button>
             </Link>
           </div>

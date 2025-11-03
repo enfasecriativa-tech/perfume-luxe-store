@@ -5,31 +5,18 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Minus, Plus, X, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, ArrowLeft } from 'lucide-react';
+import { useCart } from '@/hooks/useCart';
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const { cartItems, updateQuantity, removeItem, getSubtotal } = useCart();
   const [cep, setCep] = useState('');
   const [coupon, setCoupon] = useState('');
 
-  const subtotal: number = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal: number = getSubtotal();
   const shipping: number = 0;
   const discount: number = 0;
   const total: number = subtotal + shipping - discount;
-
-  const updateQuantity = (id: string, change: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
-    );
-  };
-
-  const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,11 +62,12 @@ const Cart = () => {
                         />
                         <div>
                           <h3 className="font-medium">{item.name}</h3>
+                          <p className="text-sm text-muted-foreground">{item.brand} - {item.size}</p>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => removeItem(item.id)}
-                            className="text-xs text-muted-foreground hover:text-destructive p-0 h-auto"
+                            className="text-xs text-muted-foreground hover:text-destructive p-0 h-auto mt-1"
                           >
                             EXCLUIR X
                           </Button>
@@ -164,7 +152,7 @@ const Cart = () => {
                   <Button variant="outline" className="w-full" asChild>
                     <Link to="/produtos">Continuar comprando</Link>
                   </Button>
-                  <Button className="w-full bg-green-600 hover:bg-green-700">
+                  <Button className="w-full" style={{ backgroundColor: '#22c55e' }}>
                     Finalizar compra
                   </Button>
                 </div>

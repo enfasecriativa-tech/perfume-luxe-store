@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Share2, Truck } from "lucide-react";
+import { Share2, Truck, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCart } from "@/hooks/useCart";
 
 interface ProductVariant {
   id: string;
@@ -30,6 +31,8 @@ interface Product {
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [zipCode, setZipCode] = useState("");
@@ -116,6 +119,33 @@ const ProductDetail = () => {
   const displayPrice = selectedVariantData?.price || product.variants[0]?.price || 0;
   const installments = `ou 4x R$ ${(displayPrice / 4).toFixed(2).replace(".", ",")}`;
   const images = [product.image_url, product.image_url_2, product.image_url_3].filter(Boolean);
+
+  const handleAddToCart = () => {
+    if (!selectedVariant || !selectedVariantData) {
+      toast.error('Selecione um tamanho');
+      return;
+    }
+
+    if (selectedVariantData.is_sold_out) {
+      toast.error('Este tamanho está esgotado');
+      return;
+    }
+
+    addToCart({
+      productId: product.id,
+      variantId: selectedVariant,
+      name: product.name,
+      brand: product.brand || '',
+      size: selectedVariantData.size,
+      price: selectedVariantData.price,
+      image_url: product.image_url || '/placeholder.svg',
+    });
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    navigate('/carrinho');
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -231,14 +261,28 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* Buy Button */}
-            <Button
-              size="lg"
-              className="w-full h-14 text-lg font-bold bg-success hover:bg-success/90"
-              disabled={!selectedVariant || product.variants.find(v => v.id === selectedVariant)?.is_sold_out}
-            >
-              COMPRAR
-            </Button>
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <Button
+                size="lg"
+                onClick={handleAddToCart}
+                variant="outline"
+                className="w-full h-14 text-lg font-bold"
+                disabled={!selectedVariant || product.variants.find(v => v.id === selectedVariant)?.is_sold_out}
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                ADICIONAR AO CARRINHO
+              </Button>
+              <Button
+                size="lg"
+                onClick={handleBuyNow}
+                className="w-full h-14 text-lg font-bold"
+                style={{ backgroundColor: '#22c55e' }}
+                disabled={!selectedVariant || product.variants.find(v => v.id === selectedVariant)?.is_sold_out}
+              >
+                COMPRAR AGORA
+              </Button>
+            </div>
 
             {/* Security Badge */}
             <p className="text-center text-sm text-success font-semibold">
