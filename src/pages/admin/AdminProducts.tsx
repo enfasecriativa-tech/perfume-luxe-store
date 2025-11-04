@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Calendar, DollarSign, Pencil } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, Pencil, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -47,6 +47,7 @@ interface Product {
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [costDate, setCostDate] = useState<Date>(new Date());
@@ -442,6 +443,14 @@ const AdminProducts = () => {
     }
   };
 
+  const filteredProducts = products.filter(product => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(searchLower) ||
+      (product.brand && product.brand.toLowerCase().includes(searchLower))
+    );
+  });
+
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
@@ -695,6 +704,17 @@ const AdminProducts = () => {
         </Dialog>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Buscar por nome ou marca..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
       <div className="bg-card rounded-lg border">
         <Table>
           <TableHeader>
@@ -709,7 +729,7 @@ const AdminProducts = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => {
+            {filteredProducts.map((product) => {
               return (
                 <TableRow key={product.id}>
                   <TableCell>
