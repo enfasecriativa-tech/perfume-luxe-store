@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Package, Users, ShoppingCart, Warehouse, LogOut, UserCog } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, Warehouse, LogOut, UserCog, Settings } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 interface AdminLayoutProps {
@@ -21,6 +21,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { path: '/admin/estoque', icon: Warehouse, label: 'Estoque' },
   ];
 
+  const settingsItem = { path: '/admin/configuracoes', icon: Settings, label: 'Configurações' };
   const accountItem = { path: '/admin/minha-conta', icon: UserCog, label: 'Minha Conta' };
   const accessItem = { path: '/admin/acessos', icon: UserCog, label: 'Criar Acesso' };
 
@@ -50,6 +51,17 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           
           <Separator className="my-4" />
           
+          {/* Configurações */}
+          <Link to={settingsItem.path}>
+            <Button
+              variant={location.pathname === settingsItem.path ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+            >
+              <settingsItem.icon className="mr-2 h-4 w-4" />
+              {settingsItem.label}
+            </Button>
+          </Link>
+
           {/* Minha Conta */}
           <Link to={accountItem.path}>
             <Button
