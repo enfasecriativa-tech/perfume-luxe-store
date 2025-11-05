@@ -41,6 +41,10 @@ interface Product {
   image_url_2: string | null;
   image_url_3: string | null;
   is_active: boolean;
+  height: number | null;
+  width: number | null;
+  length: number | null;
+  weight: number | null;
   variants?: ProductVariant[];
 }
 
@@ -64,6 +68,10 @@ const AdminProducts = () => {
     description: '',
     category: '',
     brand: '',
+    height: '',
+    width: '',
+    length: '',
+    weight: '',
   });
 
   useEffect(() => {
@@ -257,6 +265,10 @@ const AdminProducts = () => {
           description: formData.description || null,
           category: formData.category || null,
           brand: formData.brand || null,
+          height: formData.height ? parseFloat(formData.height) : null,
+          width: formData.width ? parseFloat(formData.width) : null,
+          length: formData.length ? parseFloat(formData.length) : null,
+          weight: formData.weight ? parseFloat(formData.weight) : null,
         };
 
         // Upload new images if provided
@@ -311,6 +323,10 @@ const AdminProducts = () => {
             category: formData.category || null,
             brand: formData.brand || null,
             price: null as any, // Now using product_variants for pricing
+            height: formData.height ? parseFloat(formData.height) : null,
+            width: formData.width ? parseFloat(formData.width) : null,
+            length: formData.length ? parseFloat(formData.length) : null,
+            weight: formData.weight ? parseFloat(formData.weight) : null,
           }])
           .select()
           .single();
@@ -367,6 +383,10 @@ const AdminProducts = () => {
         description: '',
         category: '',
         brand: '',
+        height: '',
+        width: '',
+        length: '',
+        weight: '',
       });
       setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
       setImageFiles([null, null, null]);
@@ -392,6 +412,10 @@ const AdminProducts = () => {
       description: product.description || '',
       category: product.category || '',
       brand: product.brand || '',
+      height: product.height?.toString() || '',
+      width: product.width?.toString() || '',
+      length: product.length?.toString() || '',
+      weight: product.weight?.toString() || '',
     });
     
     // Load variants
@@ -435,6 +459,10 @@ const AdminProducts = () => {
         description: '',
         category: '',
         brand: '',
+        height: '',
+        width: '',
+        length: '',
+        weight: '',
       });
       setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
       setImageFiles([null, null, null]);
@@ -663,6 +691,62 @@ const AdminProducts = () => {
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">Dados do Volume</Label>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="height">Altura (cm)</Label>
+                    <Input
+                      id="height"
+                      type="number"
+                      step="0.01"
+                      placeholder="14"
+                      value={formData.height}
+                      onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="width">Largura (cm)</Label>
+                    <Input
+                      id="width"
+                      type="number"
+                      step="0.01"
+                      placeholder="7"
+                      value={formData.width}
+                      onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="length">Comprimento (cm)</Label>
+                    <Input
+                      id="length"
+                      type="number"
+                      step="0.01"
+                      placeholder="5"
+                      value={formData.length}
+                      onChange={(e) => setFormData({ ...formData, length: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="weight">Peso (kg)</Label>
+                    <Input
+                      id="weight"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.2"
+                      value={formData.weight}
+                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">

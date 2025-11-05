@@ -252,15 +252,19 @@ export type Database = {
           cost_price_usd: number | null
           created_at: string | null
           description: string | null
+          height: number | null
           id: string
           image_url: string | null
           image_url_2: string | null
           image_url_3: string | null
           is_active: boolean | null
+          length: number | null
           name: string
           price: number | null
           size: string | null
           updated_at: string | null
+          weight: number | null
+          width: number | null
         }
         Insert: {
           brand?: string | null
@@ -270,15 +274,19 @@ export type Database = {
           cost_price_usd?: number | null
           created_at?: string | null
           description?: string | null
+          height?: number | null
           id?: string
           image_url?: string | null
           image_url_2?: string | null
           image_url_3?: string | null
           is_active?: boolean | null
+          length?: number | null
           name: string
           price?: number | null
           size?: string | null
           updated_at?: string | null
+          weight?: number | null
+          width?: number | null
         }
         Update: {
           brand?: string | null
@@ -288,15 +296,19 @@ export type Database = {
           cost_price_usd?: number | null
           created_at?: string | null
           description?: string | null
+          height?: number | null
           id?: string
           image_url?: string | null
           image_url_2?: string | null
           image_url_3?: string | null
           is_active?: boolean | null
+          length?: number | null
           name?: string
           price?: number | null
           size?: string | null
           updated_at?: string | null
+          weight?: number | null
+          width?: number | null
         }
         Relationships: []
       }
