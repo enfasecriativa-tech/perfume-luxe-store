@@ -37,6 +37,11 @@ const ProductDetail = () => {
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [zipCode, setZipCode] = useState("");
   const [loading, setLoading] = useState(true);
+  const [calculatingShipping, setCalculatingShipping] = useState(false);
+  const [shippingOptions, setShippingOptions] = useState<{
+    cheapest?: { name: string; company: string; price: number; deliveryTime: number };
+    fastest?: { name: string; company: string; price: number; deliveryTime: number };
+  } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -147,6 +152,64 @@ const ProductDetail = () => {
     navigate('/carrinho');
   };
 
+  const formatZipCode = (value: string) => {
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length <= 5) {
+      return cleaned;
+    }
+    return `${cleaned.slice(0, 5)}-${cleaned.slice(5, 8)}`;
+  };
+
+  const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatZipCode(e.target.value);
+    setZipCode(formatted);
+  };
+
+  const handleCalculateShipping = async () => {
+    const cleanZip = zipCode.replace(/\D/g, '');
+    
+    if (cleanZip.length !== 8) {
+      toast.error('Digite um CEP válido');
+      return;
+    }
+
+    if (!product?.id) {
+      toast.error('Produto não encontrado');
+      return;
+    }
+
+    setCalculatingShipping(true);
+    setShippingOptions(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('calculate-shipping', {
+        body: {
+          cep: cleanZip,
+          product_id: product.id
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setShippingOptions({
+        cheapest: data.cheapest,
+        fastest: data.fastest
+      });
+
+      toast.success('Frete calculado com sucesso!');
+    } catch (error) {
+      console.error('Error calculating shipping:', error);
+      toast.error('Erro ao calcular frete. Tente novamente.');
+    } finally {
+      setCalculatingShipping(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -253,12 +316,69 @@ const ProductDetail = () => {
                   type="text"
                   placeholder="00000-000"
                   value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
+                  onChange={handleZipCodeChange}
                   className="flex-1"
                   maxLength={9}
                 />
-                <Button variant="outline">CALCULAR O FRETE</Button>
+                <Button 
+                  variant="outline"
+                  onClick={handleCalculateShipping}
+                  disabled={calculatingShipping}
+                >
+                  {calculatingShipping ? 'CALCULANDO...' : 'CALCULAR O FRETE'}
+                </Button>
               </div>
+              
+              {/* Shipping Results */}
+              {shippingOptions && (
+                <div className="space-y-2 pt-2">
+                  {shippingOptions.cheapest && (
+                    <div className="border border-border rounded-lg p-3 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            💰 Mais Barato - {shippingOptions.cheapest.company}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {shippingOptions.cheapest.name}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-foreground">
+                            R$ {shippingOptions.cheapest.price.toFixed(2).replace('.', ',')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {shippingOptions.cheapest.deliveryTime} dias úteis
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {shippingOptions.fastest && (
+                    <div className="border border-border rounded-lg p-3 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            ⚡ Mais Rápido - {shippingOptions.fastest.company}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {shippingOptions.fastest.name}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-foreground">
+                            R$ {shippingOptions.fastest.price.toFixed(2).replace('.', ',')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {shippingOptions.fastest.deliveryTime} dias úteis
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
