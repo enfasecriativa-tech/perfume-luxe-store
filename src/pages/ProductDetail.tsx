@@ -182,6 +182,8 @@ const ProductDetail = () => {
     setShippingOptions(null);
 
     try {
+      console.log('Calculando frete para produto:', product.id);
+      
       const { data, error } = await supabase.functions.invoke('calculate-shipping', {
         body: {
           cep: cleanZip,
@@ -189,22 +191,35 @@ const ProductDetail = () => {
         }
       });
 
-      if (error) throw error;
+      console.log('Resposta da função:', { data, error });
 
-      if (data.error) {
+      if (error) {
+        console.error('Erro da Edge Function:', error);
+        toast.error(error.message || 'Erro ao calcular frete');
+        return;
+      }
+
+      if (data?.error) {
+        console.error('Erro retornado pela API:', data.error);
         toast.error(data.error);
+        return;
+      }
+
+      if (!data?.cheapest) {
+        toast.error('Nenhuma opção de frete disponível');
         return;
       }
 
       setShippingOptions({
         cheapest: data.cheapest,
-        fastest: data.fastest
+        fastest: data.fastest || data.cheapest
       });
 
       toast.success('Frete calculado com sucesso!');
     } catch (error) {
       console.error('Error calculating shipping:', error);
-      toast.error('Erro ao calcular frete. Tente novamente.');
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao calcular frete. Tente novamente.';
+      toast.error(errorMessage);
     } finally {
       setCalculatingShipping(false);
     }
@@ -332,7 +347,7 @@ const ProductDetail = () => {
               {/* Shipping Results */}
               {shippingOptions && (
                 <div className="space-y-2 pt-2">
-                  {shippingOptions.cheapest && (
+                  {shippingOptions?.cheapest && shippingOptions.cheapest.price != null && (
                     <div className="border border-border rounded-lg p-3 space-y-1">
                       <div className="flex items-center justify-between">
                         <div>
@@ -355,7 +370,7 @@ const ProductDetail = () => {
                     </div>
                   )}
                   
-                  {shippingOptions.fastest && (
+                  {shippingOptions?.fastest && shippingOptions.fastest.price != null && (
                     <div className="border border-border rounded-lg p-3 space-y-1">
                       <div className="flex items-center justify-between">
                         <div>

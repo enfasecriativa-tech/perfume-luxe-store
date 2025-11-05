@@ -155,21 +155,21 @@ Deno.serve(async (req) => {
         name: cheapest.name,
         company: cheapest.company.name,
         price: parseFloat(cheapest.price),
-        deliveryTime: cheapest.delivery_time
+        delivery_time: cheapest.delivery_time
       },
       fastest: cheapest.id === fastest.id ? null : {
         id: fastest.id,
         name: fastest.name,
         company: fastest.company.name,
         price: parseFloat(fastest.price),
-        deliveryTime: fastest.delivery_time
+        delivery_time: fastest.delivery_time
       },
       allOptions: shippingOptions.map(opt => ({
         id: opt.id,
         name: opt.name,
         company: opt.company.name,
         price: parseFloat(opt.price),
-        deliveryTime: opt.delivery_time
+        delivery_time: opt.delivery_time
       }))
     };
 
