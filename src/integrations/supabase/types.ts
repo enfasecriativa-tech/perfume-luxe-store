@@ -353,9 +353,13 @@ export type Database = {
           id: string
           notes: string | null
           payment_method: string | null
+          payment_proof_url: string | null
           payment_status: string | null
           sale_date: string | null
+          shipping_address_id: string | null
+          status: string | null
           total_amount: number
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -364,9 +368,13 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
           payment_status?: string | null
           sale_date?: string | null
+          shipping_address_id?: string | null
+          status?: string | null
           total_amount: number
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -375,9 +383,13 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
           payment_status?: string | null
           sale_date?: string | null
+          shipping_address_id?: string | null
+          status?: string | null
           total_amount?: number
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -385,6 +397,20 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_shipping_address_id_fkey"
+            columns: ["shipping_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
