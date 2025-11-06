@@ -38,12 +38,31 @@ export const FavoritesTab = () => {
         
         const { data: products, error: prodError } = await supabase
           .from('products')
-          .select('id, name, brand, price, image_url')
+          .select('id, name, brand, image_url')
           .in('id', productIds)
           .eq('is_active', true);
 
         if (prodError) throw prodError;
-        setFavoriteProducts(products || []);
+
+        // Get the cheapest variant price for each product
+        const productsWithPrice = await Promise.all(
+          (products || []).map(async (product) => {
+            const { data: variants } = await supabase
+              .from('product_variants')
+              .select('price')
+              .eq('product_id', product.id)
+              .eq('is_active', true)
+              .order('price', { ascending: true })
+              .limit(1);
+
+            return {
+              ...product,
+              price: variants && variants.length > 0 ? variants[0].price : null
+            };
+          })
+        );
+
+        setFavoriteProducts(productsWithPrice);
       } else {
         setFavoriteProducts([]);
       }

@@ -60,7 +60,7 @@ const ProductCard = ({ id, image, brand, name, price, installments }: ProductCar
         </Link>
         <div className="space-y-1">
           <p className="text-lg font-bold text-foreground">
-            R$ {price.toFixed(2).replace(".", ",")}
+            {price != null ? `R$ ${price.toFixed(2).replace(".", ",")}` : 'Preço sob consulta'}
           </p>
           {installments && (
             <p className="text-xs text-muted-foreground">{installments}</p>
