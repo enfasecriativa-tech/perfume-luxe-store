@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Phone } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -29,9 +29,12 @@ const AdminSettings = () => {
     description: '',
     is_active: true
   });
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
 
   useEffect(() => {
     loadCategories();
+    loadWhatsappNumber();
   }, []);
 
   const loadCategories = async () => {
@@ -47,6 +50,43 @@ const AdminSettings = () => {
       toast.error('Erro ao carregar categorias: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWhatsappNumber = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('store_settings')
+        .select('value')
+        .eq('key', 'whatsapp_number')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setWhatsappNumber(data?.value || '');
+    } catch (error: any) {
+      toast.error('Erro ao carregar número do WhatsApp: ' + error.message);
+    }
+  };
+
+  const handleSaveWhatsapp = async () => {
+    setSavingWhatsapp(true);
+    try {
+      const { error } = await supabase
+        .from('store_settings')
+        .upsert({ 
+          key: 'whatsapp_number', 
+          value: whatsappNumber,
+          description: 'Número do WhatsApp para atendimento e pedidos'
+        }, {
+          onConflict: 'key'
+        });
+
+      if (error) throw error;
+      toast.success('Número do WhatsApp atualizado com sucesso!');
+    } catch (error: any) {
+      toast.error('Erro ao salvar número do WhatsApp: ' + error.message);
+    } finally {
+      setSavingWhatsapp(false);
     }
   };
 
@@ -133,6 +173,40 @@ const AdminSettings = () => {
           <p className="text-muted-foreground">Gerencie as configurações da sua loja</p>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="h-5 w-5" />
+            WhatsApp para Atendimento
+          </CardTitle>
+          <CardDescription>
+            Configure o número do WhatsApp para atendimento de pedidos e suporte
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Input
+                type="tel"
+                placeholder="Ex: 5511999999999"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Digite o número com código do país e DDD (sem espaços ou caracteres especiais)
+              </p>
+            </div>
+            <Button 
+              onClick={handleSaveWhatsapp} 
+              disabled={savingWhatsapp}
+            >
+              {savingWhatsapp ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
