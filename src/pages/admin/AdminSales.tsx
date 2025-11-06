@@ -198,33 +198,49 @@ const AdminSales = () => {
         <h1 className="text-3xl font-bold">Gerenciamento de Pedidos</h1>
       </div>
 
-      <div className="grid gap-4">
-        {sales.map((sale) => (
-          <Card key={sale.id} className="p-6">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">
-                    Pedido #{sale.id.slice(0, 8)}
-                  </span>
-                  <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(sale.status)}`}>
-                    {sale.status}
-                  </span>
-                </div>
-                <p className="font-semibold">{sale.profiles?.full_name || 'Cliente não identificado'}</p>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(sale.sale_date), 'dd/MM/yyyy HH:mm')}
-                </p>
-                <p className="text-lg font-bold">R$ {Number(sale.total_amount).toFixed(2)}</p>
-              </div>
-              <Button onClick={() => handleViewDetails(sale)} variant="outline" size="sm">
-                <Eye className="w-4 h-4 mr-2" />
-                Ver Detalhes
-              </Button>
+      {sales.length === 0 ? (
+        <Card className="p-12">
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+              <Eye className="w-8 h-8 text-muted-foreground" />
             </div>
-          </Card>
-        ))}
-      </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Nenhum pedido encontrado</h3>
+              <p className="text-muted-foreground">
+                Os pedidos finalizados pelos clientes aparecerão aqui para gerenciamento.
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {sales.map((sale) => (
+            <Card key={sale.id} className="p-6">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">
+                      Pedido #{sale.id.slice(0, 8)}
+                    </span>
+                    <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(sale.status)}`}>
+                      {sale.status}
+                    </span>
+                  </div>
+                  <p className="font-semibold">{sale.profiles?.full_name || 'Cliente não identificado'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(sale.sale_date), 'dd/MM/yyyy HH:mm')}
+                  </p>
+                  <p className="text-lg font-bold">R$ {Number(sale.total_amount).toFixed(2)}</p>
+                </div>
+                <Button onClick={() => handleViewDetails(sale)} variant="outline" size="sm">
+                  <Eye className="w-4 h-4 mr-2" />
+                  Ver Detalhes
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
