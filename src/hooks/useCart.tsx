@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 export interface CartItem {
   id: string;
@@ -16,6 +18,8 @@ export interface CartItem {
 const CART_STORAGE_KEY = 'shopping-cart';
 
 export const useCart = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -26,6 +30,15 @@ export const useCart = () => {
   }, [cartItems]);
 
   const addToCart = (item: Omit<CartItem, 'id' | 'quantity'>) => {
+    if (!user) {
+      toast({
+        title: "Login necessário",
+        description: "Faça login para adicionar produtos ao carrinho",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
     setCartItems(prevItems => {
       const existingItem = prevItems.find(
         i => i.productId === item.productId && i.variantId === item.variantId

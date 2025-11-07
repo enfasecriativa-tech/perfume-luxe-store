@@ -26,6 +26,7 @@ interface SaleItem {
 
 interface Sale {
   id: string;
+  order_number: string;
   total_amount: number;
   sale_date: string;
   payment_status: string;
@@ -35,8 +36,17 @@ interface Sale {
   payment_proof_url: string | null;
   user_id: string | null;
   shipping_address_id: string | null;
-  profiles: { full_name: string; phone: string } | null;
-  addresses: { 
+  shipping_cost: number;
+  shipping_method: string | null;
+  shipping_days: number | null;
+  delivery_zip_code: string | null;
+  discount_amount: number;
+  profiles: { 
+    full_name: string; 
+    phone: string;
+    cpf: string | null;
+  } | null;
+  user_addresses: { 
     street: string; 
     number: string; 
     complement: string | null;
@@ -44,7 +54,7 @@ interface Sale {
     city: string;
     state: string;
     zip_code: string;
-  } | null;
+  }[] | null;
 }
 
 const AdminSales = () => {
@@ -59,19 +69,43 @@ const AdminSales = () => {
   }, []);
 
   const loadSales = async () => {
-    const { data, error } = await supabase
-      .from('sales')
-      .select(`
-        *,
-        profiles(full_name, phone),
-        addresses(street, number, complement, neighborhood, city, state, zip_code)
-      `)
-      .order('sale_date', { ascending: false });
+    try {
+      // Buscar vendas com dados do perfil
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          profiles(full_name, phone, cpf)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) {
+      if (salesError) throw salesError;
+
+      // Para cada venda, buscar os endereços do usuário
+      const salesWithAddresses = await Promise.all(
+        (salesData || []).map(async (sale) => {
+          if (sale.user_id) {
+            const { data: addresses } = await supabase
+              .from('addresses')
+              .select('street, number, complement, neighborhood, city, state, zip_code')
+              .eq('user_id', sale.user_id);
+            
+            return {
+              ...sale,
+              user_addresses: addresses || []
+            };
+          }
+          return {
+            ...sale,
+            user_addresses: []
+          };
+        })
+      );
+
+      setSales(salesWithAddresses);
+    } catch (error) {
+      console.error('Erro ao carregar vendas:', error);
       toast.error('Erro ao carregar vendas');
-    } else {
-      setSales(data || []);
     }
   };
 
@@ -89,9 +123,42 @@ const AdminSales = () => {
   };
 
   const handleViewDetails = async (sale: Sale) => {
-    setSelectedSale(sale);
-    await loadSaleItems(sale.id);
-    setIsDetailsOpen(true);
+    // Recarregar dados completos do pedido incluindo endereços
+    try {
+      const { data: saleData, error: saleError } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          profiles(full_name, phone, cpf)
+        `)
+        .eq('id', sale.id)
+        .single();
+
+      if (saleError) throw saleError;
+
+      // Buscar endereços do usuário se houver user_id
+      let addresses: any[] = [];
+      if (saleData.user_id) {
+        const { data: addressData } = await supabase
+          .from('addresses')
+          .select('street, number, complement, neighborhood, city, state, zip_code')
+          .eq('user_id', saleData.user_id);
+        
+        addresses = addressData || [];
+      }
+
+      const saleWithAddresses = {
+        ...saleData,
+        user_addresses: addresses
+      };
+
+      setSelectedSale(saleWithAddresses);
+      await loadSaleItems(sale.id);
+      setIsDetailsOpen(true);
+    } catch (error) {
+      console.error('Erro ao carregar detalhes do pedido:', error);
+      toast.error('Erro ao carregar detalhes do pedido');
+    }
   };
 
   const handleUpdateStatus = async (saleId: string, field: string, value: string) => {
@@ -188,8 +255,31 @@ const AdminSales = () => {
       shipped: 'bg-purple-100 text-purple-800',
       delivered: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800',
+      completed: 'bg-green-100 text-green-800',
     };
     return badges[status as keyof typeof badges] || badges.pending;
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'Pendente',
+      processing: 'Processando',
+      shipped: 'Enviado',
+      delivered: 'Entregue',
+      cancelled: 'Cancelado',
+      completed: 'Concluído',
+    };
+    return labels[status] || status;
+  };
+
+  const getPaymentStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'Pendente',
+      paid: 'Pago',
+      failed: 'Falhou',
+      cancelled: 'Cancelado',
+    };
+    return labels[status] || status;
   };
 
   return (
@@ -220,10 +310,10 @@ const AdminSales = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">
-                      Pedido #{sale.id.slice(0, 8)}
+                      Pedido #{sale.order_number || sale.id.slice(0, 8)}
                     </span>
                     <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(sale.status)}`}>
-                      {sale.status}
+                      {getStatusLabel(sale.status)}
                     </span>
                   </div>
                   <p className="font-semibold">{sale.profiles?.full_name || 'Cliente não identificado'}</p>
@@ -245,7 +335,7 @@ const AdminSales = () => {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes do Pedido #{selectedSale?.id.slice(0, 8)}</DialogTitle>
+            <DialogTitle>Detalhes do Pedido #{selectedSale?.order_number || selectedSale?.id.slice(0, 8)}</DialogTitle>
           </DialogHeader>
 
           {selectedSale && (
@@ -262,23 +352,45 @@ const AdminSales = () => {
                     <p className="text-muted-foreground">Telefone</p>
                     <p className="font-medium">{selectedSale.profiles?.phone || '-'}</p>
                   </div>
+                  {selectedSale.profiles?.cpf && (
+                    <div>
+                      <p className="text-muted-foreground">CPF</p>
+                      <p className="font-medium">{selectedSale.profiles.cpf}</p>
+                    </div>
+                  )}
                 </div>
-              </Card>
 
-              {/* Endereço de Entrega */}
-              {selectedSale.addresses && (
-                <Card className="p-4">
-                  <h3 className="font-semibold mb-3">Endereço de Entrega</h3>
-                  <p className="text-sm">
-                    {selectedSale.addresses.street}, {selectedSale.addresses.number}
-                    {selectedSale.addresses.complement && ` - ${selectedSale.addresses.complement}`}
-                    <br />
-                    {selectedSale.addresses.neighborhood} - {selectedSale.addresses.city}/{selectedSale.addresses.state}
-                    <br />
-                    CEP: {selectedSale.addresses.zip_code}
-                  </p>
-                </Card>
-              )}
+                {/* Endereços Cadastrados */}
+                {selectedSale.user_addresses && selectedSale.user_addresses.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold mb-2 text-sm">Endereços Cadastrados:</h4>
+                    {selectedSale.user_addresses.map((address, index) => (
+                      <div key={index} className="text-sm mb-2 p-2 bg-muted rounded">
+                        {address.street}, {address.number}
+                        {address.complement && ` - ${address.complement}`}
+                        <br />
+                        {address.neighborhood} - {address.city}/{address.state}
+                        <br />
+                        CEP: {address.zip_code}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* CEP de Entrega do Pedido */}
+                {selectedSale.delivery_zip_code && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold mb-2 text-sm">CEP para Entrega deste Pedido:</h4>
+                    <p className="text-sm">{selectedSale.delivery_zip_code}</p>
+                    {selectedSale.shipping_method && (
+                      <p className="text-sm mt-1">
+                        Frete: {selectedSale.shipping_method} - R$ {selectedSale.shipping_cost.toFixed(2).replace('.', ',')}
+                        {selectedSale.shipping_days && ` (${selectedSale.shipping_days} dias úteis)`}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </Card>
 
               {/* Produtos */}
               <Card className="p-4">

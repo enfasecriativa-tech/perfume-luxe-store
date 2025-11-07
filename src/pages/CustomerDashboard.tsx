@@ -13,6 +13,7 @@ import Footer from '@/components/Footer';
 import { toast } from 'sonner';
 import { AddressesTab } from '@/components/AddressesTab';
 import { FavoritesTab } from '@/components/FavoritesTab';
+import { OrdersTab } from '@/components/OrdersTab';
 
 const CustomerDashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -194,19 +195,7 @@ const CustomerDashboard = () => {
             </TabsContent>
 
             <TabsContent value="orders">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Meus Pedidos</CardTitle>
-                  <CardDescription>
-                    Acompanhe seus pedidos
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Você ainda não fez nenhum pedido.
-                  </p>
-                </CardContent>
-              </Card>
+              <OrdersTab />
             </TabsContent>
 
             <TabsContent value="favorites">

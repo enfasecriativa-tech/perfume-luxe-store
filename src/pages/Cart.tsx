@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Minus, Plus, ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -17,7 +18,9 @@ interface ShippingOption {
 }
 
 const Cart = () => {
-  const { cartItems, updateQuantity, removeItem, getSubtotal } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { cartItems, updateQuantity, removeItem, getSubtotal, clearCart } = useCart();
   const [cep, setCep] = useState('');
   const [coupon, setCoupon] = useState('');
   const [calculatingShipping, setCalculatingShipping] = useState(false);
@@ -31,6 +34,141 @@ const Cart = () => {
   const shipping: number = selectedShipping && selectedShipping.price != null ? selectedShipping.price : 0;
   const discount: number = 0;
   const total: number = subtotal + shipping - discount;
+
+  const handleCheckout = async () => {
+    if (!user) {
+      toast.error('Faça login para finalizar sua compra');
+      navigate('/auth');
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error('Seu carrinho está vazio');
+      return;
+    }
+
+    try {
+      // Buscar o número do WhatsApp das configurações
+      const { data: settings, error: settingsError } = await supabase
+        .from('store_settings')
+        .select('value')
+        .eq('key', 'whatsapp_number')
+        .single();
+
+      if (settingsError || !settings?.value) {
+        toast.error('Número do WhatsApp não configurado. Entre em contato com o suporte.');
+        return;
+      }
+
+      const whatsappNumber = settings.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+
+      // 1. Criar o pedido no banco de dados
+      const { data: orderData, error: orderError } = await supabase
+        .from('sales')
+        .insert({
+          user_id: user.id,
+          total_amount: total,
+          shipping_cost: shipping,
+          shipping_method: selectedShipping?.name || null,
+          shipping_days: selectedShipping?.delivery_time || null,
+          delivery_zip_code: cep || null,
+          discount_amount: discount,
+          payment_method: 'whatsapp',
+          payment_status: 'pending',
+          status: 'pending',
+          whatsapp_sent: true,
+          notes: 'Pedido via WhatsApp'
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('Erro ao criar pedido:', orderError);
+        toast.error('Erro ao registrar pedido. Tente novamente.');
+        return;
+      }
+
+      // 2. Criar os itens do pedido
+      const orderItems = cartItems.map(item => ({
+        sale_id: orderData.id,
+        product_id: item.productId,
+        variant_id: item.variantId,
+        product_name: item.name,
+        product_brand: item.brand,
+        product_size: item.size,
+        product_image_url: item.image_url,
+        quantity: item.quantity,
+        unit_price: item.price,
+        subtotal: item.price * item.quantity
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('sales_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        console.error('Erro ao criar itens do pedido:', itemsError);
+        // Deletar o pedido criado se houver erro nos itens
+        await supabase.from('sales').delete().eq('id', orderData.id);
+        toast.error('Erro ao registrar itens do pedido. Tente novamente.');
+        return;
+      }
+
+      // 3. Montar a mensagem do WhatsApp
+      let message = `🛍️ *Novo Pedido #${orderData.order_number}*\n\n`;
+      message += '*Produtos:*\n';
+      
+      cartItems.forEach((item, index) => {
+        message += `\n${index + 1}. ${item.name}\n`;
+        message += `   Marca: ${item.brand}\n`;
+        message += `   Tamanho: ${item.size}\n`;
+        message += `   Quantidade: ${item.quantity}x\n`;
+        message += `   Preço unitário: R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+        message += `   Subtotal: R$ ${(item.price * item.quantity).toFixed(2).replace('.', ',')}\n`;
+      });
+
+      message += `\n*Resumo do Pedido:*\n`;
+      message += `Subtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
+      
+      if (shipping > 0) {
+        message += `Frete (${selectedShipping?.name}): R$ ${shipping.toFixed(2).replace('.', ',')}\n`;
+        message += `Prazo: ${selectedShipping?.delivery_time} dias úteis\n`;
+      } else {
+        message += `Frete: A calcular\n`;
+      }
+      
+      if (discount > 0) {
+        message += `Desconto: R$ ${discount.toFixed(2).replace('.', ',')}\n`;
+      }
+      
+      message += `*TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\n`;
+      
+      if (cep) {
+        message += `CEP para entrega: ${cep}\n\n`;
+      }
+      
+      message += `📦 Número do Pedido: *${orderData.order_number}*\n\n`;
+      message += 'Gostaria de finalizar este pedido! 😊';
+
+      // 4. Codificar a mensagem para URL
+      const encodedMessage = encodeURIComponent(message);
+      
+      // 5. Criar o link do WhatsApp
+      const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+      
+      // 6. Abrir o WhatsApp em uma nova aba
+      window.open(whatsappLink, '_blank');
+      
+      // 7. Limpar o carrinho após sucesso
+      // clearCart(); // Descomente se quiser limpar o carrinho automaticamente
+      
+      toast.success(`Pedido #${orderData.order_number} registrado! Redirecionando para o WhatsApp...`);
+      
+    } catch (error) {
+      console.error('Erro ao processar checkout:', error);
+      toast.error('Erro ao processar pedido. Tente novamente.');
+    }
+  };
 
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -310,7 +448,12 @@ const Cart = () => {
                   <Button variant="outline" className="w-full" asChild>
                     <Link to="/produtos">Continuar comprando</Link>
                   </Button>
-                  <Button className="w-full" style={{ backgroundColor: '#22c55e' }}>
+                  <Button 
+                    className="w-full" 
+                    style={{ backgroundColor: '#22c55e' }}
+                    onClick={handleCheckout}
+                    disabled={cartItems.length === 0}
+                  >
                     Finalizar compra
                   </Button>
                 </div>
