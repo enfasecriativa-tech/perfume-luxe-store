@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Calendar, DollarSign, Pencil, Search } from 'lucide-react';
@@ -376,22 +376,7 @@ const AdminProducts = () => {
         toast.success('Produto criado com sucesso!');
       }
       
-      setOpen(false);
-      setEditingProduct(null);
-      setFormData({
-        name: '',
-        description: '',
-        category: '',
-        brand: '',
-        height: '',
-        width: '',
-        length: '',
-        weight: '',
-      });
-      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
-      setImageFiles([null, null, null]);
-      setImagePreviews([null, null, null]);
-      setCostDate(new Date());
+      handleDialogClose();
       loadProducts();
     } catch (error: any) {
       toast.error(error.message || `Erro ao ${editingProduct ? 'atualizar' : 'criar'} produto`);
@@ -450,25 +435,23 @@ const AdminProducts = () => {
     }
   };
 
-  const handleDialogClose = (isOpen: boolean) => {
-    setOpen(isOpen);
-    if (!isOpen) {
-      setEditingProduct(null);
-      setFormData({
-        name: '',
-        description: '',
-        category: '',
-        brand: '',
-        height: '',
-        width: '',
-        length: '',
-        weight: '',
-      });
-      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
-      setImageFiles([null, null, null]);
-      setImagePreviews([null, null, null]);
-      setCostDate(new Date());
-    }
+  const handleDialogClose = () => {
+    setOpen(false);
+    setEditingProduct(null);
+    setFormData({
+      name: '',
+      description: '',
+      category: '',
+      brand: '',
+      height: '',
+      width: '',
+      length: '',
+      weight: '',
+    });
+    setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
+    setImageFiles([null, null, null]);
+    setImagePreviews([null, null, null]);
+    setCostDate(new Date());
   };
 
   const filteredProducts = products.filter(product => {
@@ -483,16 +466,17 @@ const AdminProducts = () => {
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Produtos</h1>
-        <Dialog open={open} onOpenChange={handleDialogClose}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Produto
-            </Button>
-          </DialogTrigger>
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Produto
+        </Button>
+      </div>
+
+      <Dialog open={open} modal={true}>
           <DialogContent 
             onInteractOutside={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
           >
             <DialogHeader>
               <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
@@ -780,9 +764,14 @@ const AdminProducts = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loadingRate || uploadingImages}>
-                {uploadingImages ? 'Enviando imagens...' : loadingRate ? 'Carregando cotação...' : 'Criar Produto'}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={handleDialogClose} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1" disabled={loadingRate || uploadingImages}>
+                  {uploadingImages ? 'Enviando imagens...' : loadingRate ? 'Carregando cotação...' : (editingProduct ? 'Atualizar' : 'Criar')}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>

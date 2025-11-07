@@ -14,29 +14,54 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+}
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { user, isAdmin, signOut } = useAuth();
   const { getItemCount } = useCart();
   const navigate = useNavigate();
   const cartItemCount = getItemCount();
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
 
-  const menuItems = [
-    { label: "Perfumes", href: "/produtos" },
-    { label: "Marcas", href: "/produtos" },
-    { label: "Maquiagem", href: "/produtos" },
-    { label: "Cosméticos", href: "/produtos" },
-    { label: "Ofertas", href: "/produtos" },
-  ];
+  const menuItems = categories.map(category => ({
+    label: category.name,
+    href: "/produtos"
+  }));
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-50">
