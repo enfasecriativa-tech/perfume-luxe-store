@@ -18,7 +18,7 @@ All colors MUST be HSL.
     --popover-foreground: 0 0% 15%;
 
     /* Premium gold color for luxury feel */
-    --primary: 43 74% 49%;
+    --primary: 39 53% 43%;
     --primary-foreground: 0 0% 100%;
 
     /* Light background for secondary elements */
@@ -28,8 +28,8 @@ All colors MUST be HSL.
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
 
-    /* Light blue accent */
-    --accent: 199 89% 48%;
+    /* Gold accent matching primary */
+    --accent: 39 53% 43%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -38,7 +38,7 @@ All colors MUST be HSL.
     /* Subtle borders */
     --border: 0 0% 90%;
     --input: 0 0% 90%;
-    --ring: 43 74% 49%;
+    --ring: 39 53% 43%;
 
     --radius: 0.25rem;
     
@@ -81,7 +81,7 @@ All colors MUST be HSL.
     --popover: 0 0% 12%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 43 74% 49%;
+    --primary: 39 53% 43%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 15%;
@@ -90,7 +90,7 @@ All colors MUST be HSL.
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 199 89% 48%;
+    --accent: 39 53% 43%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -98,7 +98,7 @@ All colors MUST be HSL.
 
     --border: 0 0% 20%;
     --input: 0 0% 20%;
-    --ring: 43 74% 49%;
+    --ring: 39 53% 43%;
     
     --success: 217 91% 35%;
     --success-foreground: 0 0% 100%;

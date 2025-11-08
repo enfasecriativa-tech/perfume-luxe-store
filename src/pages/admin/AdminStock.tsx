@@ -39,7 +39,7 @@ const AdminStock = () => {
     if (quantity === 0) {
       return <Badge variant="destructive">Esgotado</Badge>;
     }
-    return <Badge className="bg-success">Normal</Badge>;
+    return <Badge className="bg-primary text-primary-foreground">Normal</Badge>;
   };
 
   return (

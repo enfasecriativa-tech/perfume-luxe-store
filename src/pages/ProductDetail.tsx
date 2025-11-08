@@ -411,8 +411,7 @@ const ProductDetail = () => {
               <Button
                 size="lg"
                 onClick={handleBuyNow}
-                className="w-full h-14 text-lg font-bold"
-                style={{ backgroundColor: '#22c55e' }}
+                className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90"
                 disabled={!selectedVariant || product.variants.find(v => v.id === selectedVariant)?.is_sold_out}
               >
                 COMPRAR AGORA

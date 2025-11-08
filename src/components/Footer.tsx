@@ -95,7 +95,7 @@ const Footer = () => {
         {/* Copyright */}
         <div className="border-t border-border mt-8 pt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            © 2025 Parfum. Todos os direitos reservados.
+            © 2025 Acqua D'or. Todos os direitos reservados.
           </p>
         </div>
       </div>

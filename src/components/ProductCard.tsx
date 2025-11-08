@@ -68,7 +68,7 @@ const ProductCard = ({ id, image, brand, name, price, installments }: ProductCar
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full bg-success hover:bg-success/90" size="sm" asChild>
+        <Button className="w-full" size="sm" asChild>
           <Link to={`/produto/${id}`}>
             Ver Detalhes
           </Link>

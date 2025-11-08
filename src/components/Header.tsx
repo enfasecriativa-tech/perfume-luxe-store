@@ -18,6 +18,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
+import Logo from "@/assets/Logo.png";
 
 interface Category {
   id: string;
@@ -93,9 +94,11 @@ const Header = () => {
 
           {/* Logo */}
           <Link to="/" className="flex-shrink-0">
-            <div className="text-xl md:text-2xl font-bold text-primary">
-              PARFUM
-            </div>
+            <img 
+              src={Logo} 
+              alt="Acqua D'or" 
+              className="h-8 md:h-10 w-auto"
+            />
           </Link>
 
           {/* Search Bar - Hidden on mobile */}

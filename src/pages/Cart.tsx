@@ -449,8 +449,7 @@ const Cart = () => {
                     <Link to="/produtos">Continuar comprando</Link>
                   </Button>
                   <Button 
-                    className="w-full" 
-                    style={{ backgroundColor: '#22c55e' }}
+                    className="w-full bg-primary hover:bg-primary/90" 
                     onClick={handleCheckout}
                     disabled={cartItems.length === 0}
                   >
