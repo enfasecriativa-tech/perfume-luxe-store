@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Package, Users, ShoppingCart, Warehouse, LogOut, UserCog, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, Warehouse, LogOut, UserCog, Settings, Image, Home } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 interface AdminLayoutProps {
@@ -19,6 +19,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { path: '/admin/clientes', icon: Users, label: 'Clientes' },
     { path: '/admin/vendas', icon: ShoppingCart, label: 'Vendas' },
     { path: '/admin/estoque', icon: Warehouse, label: 'Estoque' },
+    { path: '/admin/banners', icon: Image, label: 'Banners' },
   ];
 
   const settingsItem = { path: '/admin/configuracoes', icon: Settings, label: 'Configurações' };
@@ -33,6 +34,19 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           <h1 className="text-2xl font-bold text-primary">Admin</h1>
         </div>
         <nav className="space-y-1 px-3 pb-20">
+          {/* Botão Ir para Home */}
+          <Link to="/">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-muted-foreground hover:text-foreground"
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Ir para Home
+            </Button>
+          </Link>
+          
+          <Separator className="my-4" />
+          
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
