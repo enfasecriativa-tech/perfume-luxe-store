@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -37,6 +38,9 @@ interface Product {
 }
 
 const Products = () => {
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +58,7 @@ const Products = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [products, selectedBrands, selectedSizes, priceRange, sortBy]);
+  }, [products, selectedBrands, selectedSizes, priceRange, sortBy, searchQuery]);
 
   const loadProducts = async () => {
     try {
@@ -110,6 +114,16 @@ const Products = () => {
 
   const applyFilters = () => {
     let filtered = [...products];
+
+    // Filter by search query
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(searchLower) ||
+        (p.brand && p.brand.toLowerCase().includes(searchLower)) ||
+        (p.category && p.category.toLowerCase().includes(searchLower))
+      );
+    }
 
     // Filter by brand
     if (selectedBrands.length > 0) {
@@ -321,6 +335,13 @@ const Products = () => {
               </p>
             ) : (
               <>
+                {searchQuery && (
+                  <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                    <p className="text-sm">
+                      Resultados da busca por: <span className="font-semibold text-primary">"{searchQuery}"</span>
+                    </p>
+                  </div>
+                )}
                 <p className="text-sm text-muted-foreground mb-4 md:mb-6">
                   {filteredProducts.length} produtos encontrados
                 </p>

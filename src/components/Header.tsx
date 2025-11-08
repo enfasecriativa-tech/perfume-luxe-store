@@ -30,6 +30,7 @@ interface Category {
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const { user, isAdmin, signOut } = useAuth();
   const { getItemCount } = useCart();
   const navigate = useNavigate();
@@ -38,6 +39,14 @@ const Header = () => {
   useEffect(() => {
     loadCategories();
   }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/produtos?search=${encodeURIComponent(searchTerm.trim())}`);
+      setSearchTerm("");
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -103,14 +112,16 @@ const Header = () => {
 
           {/* Search Bar - Hidden on mobile */}
           <div className="hidden md:flex flex-1 max-w-2xl mx-8">
-            <div className="relative w-full">
+            <form onSubmit={handleSearch} className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="O que você procura?"
                 className="pl-10 h-12 bg-secondary border-0"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
+            </form>
           </div>
 
           {/* User Actions */}
