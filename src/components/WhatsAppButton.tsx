@@ -15,12 +15,13 @@ const WhatsAppButton = () => {
     try {
       const { data, error } = await supabase
         .from('store_settings')
-        .select('whatsapp_number')
+        .select('value')
+        .eq('key', 'whatsapp_number')
         .single();
 
       if (error) throw error;
-      if (data?.whatsapp_number) {
-        setWhatsappNumber(data.whatsapp_number);
+      if (data?.value) {
+        setWhatsappNumber(data.value);
       }
     } catch (error) {
       console.error('Erro ao carregar número do WhatsApp:', error);

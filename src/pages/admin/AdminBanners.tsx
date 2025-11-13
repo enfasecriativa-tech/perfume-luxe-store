@@ -376,11 +376,13 @@ const AdminBanners = () => {
       )}
 
       {/* Dialog de Criar/Editar */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => {
-        setDialogOpen(open);
-        if (!open) resetForm();
-      }}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={dialogOpen} modal={true}>
+        <DialogContent 
+          className="max-w-2xl"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>{editingBanner ? 'Editar Banner' : 'Novo Banner'}</DialogTitle>
             <DialogDescription>
@@ -499,7 +501,10 @@ const AdminBanners = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setDialogOpen(false)}
+                onClick={() => {
+                  setDialogOpen(false);
+                  resetForm();
+                }}
                 disabled={uploading}
               >
                 Cancelar

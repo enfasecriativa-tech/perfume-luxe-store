@@ -122,7 +122,7 @@ const ProductDetail = () => {
 
   const selectedVariantData = product.variants.find(v => v.id === selectedVariant);
   const displayPrice = selectedVariantData?.price || product.variants[0]?.price || 0;
-  const installments = `ou 4x R$ ${(displayPrice / 4).toFixed(2).replace(".", ",")}`;
+  const installments = "ou em até 12x (consulte condições)";
   const images = [product.image_url, product.image_url_2, product.image_url_3].filter(Boolean);
 
   const handleAddToCart = () => {
@@ -195,18 +195,23 @@ const ProductDetail = () => {
 
       if (error) {
         console.error('Erro da Edge Function:', error);
-        toast.error(error.message || 'Erro ao calcular frete');
+        toast.error('Erro ao calcular frete. Tente novamente.');
         return;
       }
 
-      if (data?.error) {
-        console.error('Erro retornado pela API:', data.error);
-        toast.error(data.error);
+      // Caso especial: CEP muito próximo ou sem opções
+      if (data?.error || data?.message) {
+        console.log('Situação especial de frete:', data);
+        toast.info(data.message || data.error, {
+          duration: 5000,
+          description: 'Entre em contato via WhatsApp para mais informações'
+        });
+        setShippingOptions(null);
         return;
       }
 
       if (!data?.cheapest) {
-        toast.error('Nenhuma opção de frete disponível');
+        toast.error('Nenhuma opção de frete disponível para este CEP');
         return;
       }
 

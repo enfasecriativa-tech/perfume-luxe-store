@@ -37,6 +37,7 @@ const Home = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [bannersLoading, setBannersLoading] = useState(true);
 
   useEffect(() => {
     loadFeaturedProducts();
@@ -55,6 +56,7 @@ const Home = () => {
 
   const loadBanners = async () => {
     try {
+      setBannersLoading(true);
       const { data, error } = await supabase
         .from('banners')
         .select('*')
@@ -62,9 +64,16 @@ const Home = () => {
         .order('display_order', { ascending: true });
 
       if (error) throw error;
-      setBanners(data || []);
+      const activeBanners = data || [];
+      setBanners(activeBanners);
+      // Resetar índice quando banners são recarregados
+      if (activeBanners.length > 0) {
+        setCurrentBannerIndex(0);
+      }
     } catch (error) {
       console.error('Error loading banners:', error);
+    } finally {
+      setBannersLoading(false);
     }
   };
 
@@ -128,40 +137,57 @@ const Home = () => {
         <section className="relative w-full overflow-hidden">
           <div className="relative h-[300px] md:h-[500px] lg:h-[600px]">
             {/* Banner Image */}
-            <img
-              src={currentBanner?.image_url || heroBanner}
-              alt={currentBanner?.title || "Banner Principal"}
-              className="w-full h-full object-cover transition-opacity duration-500"
-            />
+            {!bannersLoading && banners.length > 0 && currentBanner ? (
+              <img
+                key={`banner-${currentBanner.id}`}
+                src={currentBanner.image_url}
+                alt={currentBanner.title}
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+                loading="eager"
+                onError={(e) => {
+                  // Se a imagem falhar ao carregar, força recarregamento
+                  const img = e.target as HTMLImageElement;
+                  const originalSrc = img.src;
+                  img.src = '';
+                  setTimeout(() => {
+                    img.src = originalSrc;
+                  }, 100);
+                }}
+              />
+            ) : !bannersLoading && banners.length === 0 ? (
+              <img
+                src={heroBanner}
+                alt="Banner Principal"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : null}
             
-            {/* Overlay and Content */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center">
-              <div className="container mx-auto px-4">
-                <div className="max-w-xl space-y-3 md:space-y-4">
-                  <h1 className="text-2xl md:text-5xl lg:text-6xl font-bold text-white">
-                    {currentBanner?.title || "Descubra sua"}
-                    {!currentBanner && (
-                      <>
-                        <br />
-                        <span className="text-primary">Fragrância Perfeita</span>
-                      </>
+            {/* Overlay and Content - Só mostra se houver banner cadastrado */}
+            {currentBanner && (
+              <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center">
+                <div className="container mx-auto px-4">
+                  <div className="max-w-xl space-y-3 md:space-y-4">
+                    {currentBanner.title && (
+                      <h1 className="text-2xl md:text-5xl lg:text-6xl font-bold text-white">
+                        {currentBanner.title}
+                      </h1>
                     )}
-                  </h1>
-                  {(currentBanner?.description || !currentBanner) && (
-                    <p className="text-base md:text-lg text-white/90">
-                      {currentBanner?.description || "Perfumes importados com até 60% de desconto"}
-                    </p>
-                  )}
-                  {(currentBanner?.button_link || !currentBanner) && (
-                    <Link to={currentBanner?.button_link || "/produtos"}>
-                      <Button size="lg" className="bg-primary hover:bg-primary/90">
-                        {currentBanner?.button_text || "Ver Ofertas"}
-                      </Button>
-                    </Link>
-                  )}
+                    {currentBanner.description && (
+                      <p className="text-base md:text-lg text-white/90">
+                        {currentBanner.description}
+                      </p>
+                    )}
+                    {currentBanner.button_link && currentBanner.button_text && (
+                      <Link to={currentBanner.button_link}>
+                        <Button size="lg" className="bg-primary hover:bg-primary/90">
+                          {currentBanner.button_text}
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Navigation Arrows */}
             {banners.length > 1 && (
@@ -220,7 +246,7 @@ const Home = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {featuredProducts.map((product) => {
                 const minPrice = Math.min(...product.variants.map(v => v.price));
-                const installments = `ou 12x de R$ ${(minPrice / 12).toFixed(2).replace(".", ",")}`;
+                const installments = "ou em até 12x (consulte condições)";
                 
                 return (
                   <ProductCard 

@@ -350,7 +350,7 @@ const Products = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {filteredProducts.map((product) => {
                     const minPrice = Math.min(...product.variants.map(v => v.price));
-                    const installments = `ou 12x de R$ ${(minPrice / 12).toFixed(2).replace(".", ",")}`;
+                    const installments = "ou em até 12x (consulte condições)";
                     
                     return (
                       <ProductCard 

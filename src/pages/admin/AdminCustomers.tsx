@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
@@ -130,20 +130,18 @@ const AdminCustomers = () => {
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Clientes</h1>
-        <Dialog open={open} onOpenChange={(isOpen) => {
-          setOpen(isOpen);
-          if (!isOpen) {
-            setEditingCustomer(null);
-            setFormData({ name: '', email: '', phone: '', cpf: '', address: '', city: '', state: '' });
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Cliente
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Cliente
+        </Button>
+      </div>
+
+      <Dialog open={open} modal={true}>
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
             <DialogHeader>
               <DialogTitle>{editingCustomer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
             </DialogHeader>
@@ -210,13 +208,25 @@ const AdminCustomers = () => {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full">
-                {editingCustomer ? 'Atualizar Cliente' : 'Criar Cliente'}
-              </Button>
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setOpen(false);
+                    setEditingCustomer(null);
+                    setFormData({ name: '', email: '', phone: '', cpf: '', address: '', city: '', state: '' });
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {editingCustomer ? 'Atualizar Cliente' : 'Criar Cliente'}
+                </Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
-      </div>
 
       <div className="bg-card rounded-lg border">
         <Table>
