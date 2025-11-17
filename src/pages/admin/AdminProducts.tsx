@@ -24,6 +24,8 @@ interface ProductVariant {
   cost_price: string;
   price: string;
   is_sold_out?: boolean;
+  quantity_in_stock?: number;
+  min_recommended_quantity?: number;
 }
 
 interface Category {
@@ -61,7 +63,7 @@ const AdminProducts = () => {
   const [imageFiles, setImageFiles] = useState<(File | null)[]>([null, null, null]);
   const [imagePreviews, setImagePreviews] = useState<(string | null)[]>([null, null, null]);
   const [variants, setVariants] = useState<ProductVariant[]>([
-    { size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }
+    { size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false, quantity_in_stock: 0, min_recommended_quantity: 1 }
   ]);
   const [formData, setFormData] = useState({
     name: '',
@@ -211,6 +213,8 @@ const AdminProducts = () => {
           cost_price: v.cost_price?.toString() || '',
           price: v.price?.toString() || '',
           is_sold_out: v.is_sold_out || false,
+          quantity_in_stock: v.quantity_in_stock || 0,
+          min_recommended_quantity: v.min_recommended_quantity || 1,
         }))
     }));
 
@@ -218,7 +222,7 @@ const AdminProducts = () => {
   };
 
   const addVariant = () => {
-    setVariants([...variants, { size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
+    setVariants([...variants, { size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false, quantity_in_stock: 0, min_recommended_quantity: 1 }]);
   };
 
   const removeVariant = (index: number) => {
@@ -232,6 +236,9 @@ const AdminProducts = () => {
     
     if (field === 'is_sold_out') {
       newVariants[index] = { ...newVariants[index], is_sold_out: value === 'true' };
+    } else if (field === 'quantity_in_stock' || field === 'min_recommended_quantity') {
+      // Campos numéricos
+      newVariants[index] = { ...newVariants[index], [field]: value === '' ? 0 : parseInt(value, 10) || 0 };
     } else {
       newVariants[index] = { ...newVariants[index], [field]: value };
     }
@@ -304,6 +311,8 @@ const AdminProducts = () => {
           cost_price: variant.cost_price ? parseFloat(variant.cost_price) : null,
           price: parseFloat(variant.price),
           is_sold_out: variant.is_sold_out || false,
+          quantity_in_stock: variant.quantity_in_stock || 0,
+          min_recommended_quantity: variant.min_recommended_quantity || 1,
         }));
 
         const { error: variantsError } = await supabase
@@ -365,6 +374,8 @@ const AdminProducts = () => {
           cost_price: variant.cost_price ? parseFloat(variant.cost_price) : null,
           price: parseFloat(variant.price),
           is_sold_out: variant.is_sold_out || false,
+          quantity_in_stock: variant.quantity_in_stock || 0,
+          min_recommended_quantity: variant.min_recommended_quantity || 1,
         }));
 
         const { error: variantsError } = await supabase
@@ -405,9 +416,13 @@ const AdminProducts = () => {
     
     // Load variants
     if (product.variants && product.variants.length > 0) {
-      setVariants(product.variants);
+      setVariants(product.variants.map(v => ({
+        ...v,
+        quantity_in_stock: v.quantity_in_stock ?? 0,
+        min_recommended_quantity: v.min_recommended_quantity ?? 1,
+      })));
     } else {
-      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false }]);
+      setVariants([{ size: '', cost_price_usd: '', cost_price: '', price: '', is_sold_out: false, quantity_in_stock: 0, min_recommended_quantity: 1 }]);
     }
     
     // Set image previews
@@ -472,11 +487,16 @@ const AdminProducts = () => {
         </Button>
       </div>
 
-      <Dialog open={open} modal={true}>
-          <DialogContent 
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          handleDialogClose();
+        } else {
+          setOpen(true);
+        }
+      }}>
+          <DialogContent
             onInteractOutside={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => e.preventDefault()}
-            onEscapeKeyDown={(e) => e.preventDefault()}
           >
             <DialogHeader>
               <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
@@ -671,6 +691,31 @@ const AdminProducts = () => {
                         >
                           Produto Esgotado
                         </Label>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div className="space-y-2">
+                          <Label htmlFor={`quantity-${index}`}>Unidade em Estoque *</Label>
+                          <Input
+                            id={`quantity-${index}`}
+                            type="number"
+                            min="0"
+                            value={variant.quantity_in_stock ?? 0}
+                            onChange={(e) => updateVariant(index, 'quantity_in_stock', e.target.value)}
+                            placeholder="0"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`min-quantity-${index}`}>Mín. Recomendado</Label>
+                          <Input
+                            id={`min-quantity-${index}`}
+                            type="number"
+                            min="0"
+                            value={variant.min_recommended_quantity ?? 1}
+                            onChange={(e) => updateVariant(index, 'min_recommended_quantity', e.target.value)}
+                            placeholder="1"
+                          />
+                        </div>
                       </div>
                     </div>
                   );

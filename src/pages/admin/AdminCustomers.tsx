@@ -136,11 +136,18 @@ const AdminCustomers = () => {
         </Button>
       </div>
 
-      <Dialog open={open} modal={true}>
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setOpen(false);
+          setEditingCustomer(null);
+          setFormData({ name: '', email: '', phone: '', cpf: '', address: '', city: '', state: '' });
+        } else {
+          setOpen(true);
+        }
+      }}>
         <DialogContent
           onInteractOutside={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
         >
             <DialogHeader>
               <DialogTitle>{editingCustomer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>

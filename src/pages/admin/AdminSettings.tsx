@@ -275,11 +275,22 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} modal={true}>
+      <Dialog open={dialogOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setDialogOpen(false);
+          setEditingCategory(null);
+          setFormData({
+            name: '',
+            description: '',
+            is_active: true
+          });
+        } else {
+          setDialogOpen(true);
+        }
+      }}>
         <DialogContent
           onInteractOutside={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <form onSubmit={handleSubmit}>
             <DialogHeader>

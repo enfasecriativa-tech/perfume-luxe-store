@@ -204,8 +204,10 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_sold_out: boolean
+          min_recommended_quantity: number | null
           price: number
           product_id: string
+          quantity_in_stock: number
           size: string
           updated_at: string | null
         }
@@ -216,8 +218,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_sold_out?: boolean
+          min_recommended_quantity?: number | null
           price: number
           product_id: string
+          quantity_in_stock?: number
           size: string
           updated_at?: string | null
         }
@@ -228,8 +232,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_sold_out?: boolean
+          min_recommended_quantity?: number | null
           price?: number
           product_id?: string
+          quantity_in_stock?: number
           size?: string
           updated_at?: string | null
         }
