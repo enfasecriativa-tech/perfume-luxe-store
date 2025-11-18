@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Package, Users, ShoppingCart, Warehouse, LogOut, UserCog, Settings, Image, Home } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Warehouse, LogOut, UserCog, Settings, Image, Home } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 interface AdminLayoutProps {
@@ -16,7 +16,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/produtos', icon: Package, label: 'Produtos' },
-    { path: '/admin/clientes', icon: Users, label: 'Clientes' },
     { path: '/admin/vendas', icon: ShoppingCart, label: 'Vendas' },
     { path: '/admin/estoque', icon: Warehouse, label: 'Estoque' },
     { path: '/admin/banners', icon: Image, label: 'Banners' },

@@ -14,7 +14,6 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import Cart from "./pages/Cart";
 import Dashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
-import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminSales from "./pages/admin/AdminSales";
 import AdminStock from "./pages/admin/AdminStock";
 import AdminAccount from "./pages/admin/AdminAccount";
@@ -46,7 +45,6 @@ const App = () => (
             <Route path="/carrinho" element={<Cart />} />
             <Route path="/admin" element={<ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/produtos" element={<ProtectedRoute><AdminLayout><AdminProducts /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/clientes" element={<ProtectedRoute><AdminLayout><AdminCustomers /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/vendas" element={<ProtectedRoute><AdminLayout><AdminSales /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/estoque" element={<ProtectedRoute><AdminLayout><AdminStock /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/configuracoes" element={<ProtectedRoute><AdminLayout><AdminSettings /></AdminLayout></ProtectedRoute>} />

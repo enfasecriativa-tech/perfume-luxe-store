@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Users, ShoppingCart, TrendingUp } from 'lucide-react';
+import { Package, ShoppingCart, TrendingUp } from 'lucide-react';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
     products: 0,
-    customers: 0,
     sales: 0,
     revenue: 0,
   });
@@ -16,9 +15,8 @@ const Dashboard = () => {
   }, []);
 
   const loadStats = async () => {
-    const [productsRes, customersRes, salesRes] = await Promise.all([
+    const [productsRes, salesRes] = await Promise.all([
       supabase.from('products').select('*', { count: 'exact', head: true }),
-      supabase.from('customers').select('*', { count: 'exact', head: true }),
       supabase.from('sales').select('total_amount'),
     ]);
 
@@ -26,7 +24,6 @@ const Dashboard = () => {
 
     setStats({
       products: productsRes.count || 0,
-      customers: customersRes.count || 0,
       sales: salesRes.data?.length || 0,
       revenue: totalRevenue,
     });
@@ -34,7 +31,6 @@ const Dashboard = () => {
 
   const cards = [
     { title: 'Produtos', value: stats.products, icon: Package, color: 'text-accent' },
-    { title: 'Clientes', value: stats.customers, icon: Users, color: 'text-primary' },
     { title: 'Vendas', value: stats.sales, icon: ShoppingCart, color: 'text-success' },
     { title: 'Receita', value: `R$ ${stats.revenue.toFixed(2)}`, icon: TrendingUp, color: 'text-primary' },
   ];
