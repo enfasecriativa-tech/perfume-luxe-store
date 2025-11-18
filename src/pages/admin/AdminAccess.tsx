@@ -17,21 +17,63 @@ const AdminAccess = () => {
 
   const handlePromote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !password || !fullName) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast.error('A senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-user-access', {
         body: { email, password, full_name: fullName, role },
       });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error || 'Falha ao criar acesso');
+      
+      if (error) {
+        console.error('Erro na Edge Function:', error);
+        // Se a função não estiver deployada, tenta método alternativo
+        if (error.message?.includes('Function not found') || error.message?.includes('404')) {
+          throw new Error('A função de criação de acesso não está disponível. Por favor, use o método alternativo via SQL Editor do Supabase.');
+        }
+        throw error;
+      }
+      
+      if (!data?.ok) {
+        const errorMsg = data?.error || 'Falha ao criar acesso';
+        console.error('Erro retornado pela função:', errorMsg);
+        throw new Error(errorMsg);
+      }
+      
       toast.success('Acesso concedido com sucesso!');
       setEmail('');
       setFullName('');
       setPassword('');
       setRole('admin');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao conceder acesso');
+      console.error('Erro completo:', error);
+      const errorMessage = error.message || 'Erro ao conceder acesso';
+      toast.error(errorMessage);
+      
+      // Se for erro de função não encontrada, mostra instruções
+      if (errorMessage.includes('não está disponível')) {
+        toast.info('Veja as instruções no console do navegador (F12)');
+        console.log(`
+          📝 INSTRUÇÕES PARA CRIAR ACESSO MANUALMENTE:
+          
+          1. Acesse o Supabase Dashboard: https://byzwcocakjoqepewdvgc.supabase.co
+          2. Vá em Authentication > Users > Add user
+          3. Crie o usuário com:
+             - Email: ${email}
+             - Password: ${password}
+             - ✅ Marque "Auto Confirm User"
+          4. No SQL Editor, execute:
+             SELECT public.promote_to_${role}('${email}');
+        `);
+      }
     } finally {
       setLoading(false);
     }
@@ -90,6 +132,13 @@ const AdminAccess = () => {
           <p className="text-xs text-muted-foreground mt-4">
             O usuário será criado e confirmado automaticamente. Em seguida, a função selecionada será atribuída.
           </p>
+          <div className="mt-4 p-3 bg-muted rounded-lg">
+            <p className="text-xs text-muted-foreground">
+              <strong>Nota:</strong> Se encontrar erros, verifique se a Edge Function "create-user-access" está deployada no Supabase.
+              <br />
+              Para fazer deploy: <code className="text-xs">supabase functions deploy create-user-access</code>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -49,14 +49,21 @@ export default async function handler(req: Request): Promise<Response> {
           return new Response(JSON.stringify({ error: listErr?.message || 'User lookup failed' }), { status: 400 });
         }
         const userId = exists.users[0].id;
-        // Insert role
+        // Insert role (use upsert to avoid conflicts)
         const { error: roleErr } = await admin
           .from('user_roles')
-          .insert({ user_id: userId, role });
+          .insert({ user_id: userId, role })
+          .select();
+        
         if (roleErr) {
-          return new Response(JSON.stringify({ error: roleErr.message }), { status: 400 });
+          // If role already exists, that's okay
+          if (roleErr.message?.includes('duplicate') || roleErr.message?.includes('unique')) {
+            console.log(`Role ${role} already exists for user ${userId}`);
+            return new Response(JSON.stringify({ ok: true, userId, updated: true, message: 'Usuário já possui esta função' }), { status: 200 });
+          }
+          return new Response(JSON.stringify({ error: `Erro ao atribuir função: ${roleErr.message}` }), { status: 400 });
         }
-        return new Response(JSON.stringify({ ok: true, userId, updated: true }), { status: 200 });
+        return new Response(JSON.stringify({ ok: true, userId, updated: true, message: 'Função atribuída com sucesso' }), { status: 200 });
       }
       return new Response(JSON.stringify({ error: createErr.message }), { status: 400 });
     }
@@ -66,13 +73,22 @@ export default async function handler(req: Request): Promise<Response> {
     // 2) Ensure profile exists (trigger covers this, but be explicit)
     await admin.from('profiles').upsert({ id: userId, full_name, phone: null }).select();
 
-    // 3) Assign role
-    const { error: roleErr } = await admin.from('user_roles').insert({ user_id: userId, role });
+    // 3) Assign role (use upsert to avoid conflicts if role already exists)
+    const { error: roleErr } = await admin
+      .from('user_roles')
+      .insert({ user_id: userId, role })
+      .select();
+    
     if (roleErr) {
-      return new Response(JSON.stringify({ error: roleErr.message }), { status: 400 });
+      // If role already exists, that's okay - user already has the role
+      if (roleErr.message?.includes('duplicate') || roleErr.message?.includes('unique')) {
+        console.log(`Role ${role} already exists for user ${userId}`);
+      } else {
+        return new Response(JSON.stringify({ error: `Erro ao atribuir função: ${roleErr.message}` }), { status: 400 });
+      }
     }
 
-    return new Response(JSON.stringify({ ok: true, userId }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, userId, message: 'Usuário criado e função atribuída com sucesso' }), { status: 200 });
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500 });
   }

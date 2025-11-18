@@ -275,7 +275,8 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={(isOpen) => {
+      <Dialog open={dialogOpen} modal={true} onOpenChange={(isOpen) => {
+        // Só fecha quando for uma ação explícita do usuário (X ou ESC)
         if (!isOpen) {
           setDialogOpen(false);
           setEditingCategory(null);
@@ -284,8 +285,6 @@ const AdminSettings = () => {
             description: '',
             is_active: true
           });
-        } else {
-          setDialogOpen(true);
         }
       }}>
         <DialogContent

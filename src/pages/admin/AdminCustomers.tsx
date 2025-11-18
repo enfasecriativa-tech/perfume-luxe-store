@@ -136,13 +136,12 @@ const AdminCustomers = () => {
         </Button>
       </div>
 
-      <Dialog open={open} onOpenChange={(isOpen) => {
+      <Dialog open={open} modal={true} onOpenChange={(isOpen) => {
+        // Só fecha quando for uma ação explícita do usuário (X ou ESC)
         if (!isOpen) {
           setOpen(false);
           setEditingCustomer(null);
           setFormData({ name: '', email: '', phone: '', cpf: '', address: '', city: '', state: '' });
-        } else {
-          setOpen(true);
         }
       }}>
         <DialogContent

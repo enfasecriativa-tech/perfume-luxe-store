@@ -332,7 +332,7 @@ const AdminSales = () => {
         </div>
       )}
 
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+      <Dialog open={isDetailsOpen} modal={true} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Pedido #{selectedSale?.order_number || selectedSale?.id.slice(0, 8)}</DialogTitle>

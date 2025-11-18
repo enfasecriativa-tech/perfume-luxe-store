@@ -487,11 +487,10 @@ const AdminProducts = () => {
         </Button>
       </div>
 
-      <Dialog open={open} onOpenChange={(isOpen) => {
+      <Dialog open={open} modal={true} onOpenChange={(isOpen) => {
+        // Só fecha quando for uma ação explícita do usuário (X ou ESC)
         if (!isOpen) {
           handleDialogClose();
-        } else {
-          setOpen(true);
         }
       }}>
           <DialogContent

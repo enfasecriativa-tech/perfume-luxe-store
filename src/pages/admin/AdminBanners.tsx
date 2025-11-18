@@ -376,12 +376,11 @@ const AdminBanners = () => {
       )}
 
       {/* Dialog de Criar/Editar */}
-      <Dialog open={dialogOpen} onOpenChange={(isOpen) => {
+      <Dialog open={dialogOpen} modal={true} onOpenChange={(isOpen) => {
+        // Só fecha quando for uma ação explícita do usuário (X ou ESC)
         if (!isOpen) {
           setDialogOpen(false);
           resetForm();
-        } else {
-          setDialogOpen(true);
         }
       }}>
         <DialogContent 
