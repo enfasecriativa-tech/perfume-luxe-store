@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const idleTimeoutMs = 5 * 60 * 1000; // 5 minutos
   const idleTimerRef = useRef<number | undefined>(undefined);
   const checkingRoleRef = useRef<boolean>(false);
+  const verifiedUserIdRef = useRef<string | null>(null);
 
   // Set up auth state listener and initial session (mount once)
   useEffect(() => {
@@ -36,6 +37,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (session?.user) {
           if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            // Se já verificamos este usuário recentemente, não bloqueia a UI novamente
+            if (verifiedUserIdRef.current === session.user.id) {
+              console.log('✅ Usuário já verificado, mantendo sessão ativa sem loading');
+              setLoading(false);
+              return;
+            }
+
             // Só verifica role se não estiver já verificando
             if (!checkingRoleRef.current) {
               console.log('🔐 Evento de auth:', event, 'userId:', session.user.id);
@@ -53,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsAdmin(false);
             setLoading(false);
             checkingRoleRef.current = false;
+            verifiedUserIdRef.current = null;
           } else {
             // TOKEN_REFRESHED or other background events: não bloqueia UI
             console.log('🔄 Evento de auth:', event, '- ignorando (background)');
@@ -61,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsAdmin(false);
           setLoading(false);
           checkingRoleRef.current = false;
+          verifiedUserIdRef.current = null;
         }
       }
     );
@@ -76,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession()
       .then(({ data: { session }, error: sessionError }) => {
         clearTimeout(loadingTimeout);
-        
+
         if (sessionError) {
           console.error('Erro ao obter sessão:', sessionError);
           setLoading(false);
@@ -86,8 +96,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
+          // Se já verificamos este usuário, não precisa verificar de novo
+          if (verifiedUserIdRef.current === session.user.id) {
+            setLoading(false);
+            return;
+          }
+
           // Aguarda checkAdminRole completar antes de desligar loading
           checkAdminRole(session.user.id).catch((err) => {
             console.error('Erro no checkAdminRole:', err);
@@ -105,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
         setCheckingRole(false);
       });
-    
+
     return () => {
       clearTimeout(loadingTimeout);
       subscription.unsubscribe();
@@ -147,20 +163,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     checkingRoleRef.current = true;
     setCheckingRole(true);
-    
+
     try {
       console.log('🔍 Verificando role para userId:', userId);
       const startTime = Date.now();
-      
+
       // Método 1: Usa função has_role existente (mais rápido e confiável) com timeout de 2s
       let isAdminResult = false;
       try {
         const rpcPromise = supabase
-          .rpc('has_role', { 
+          .rpc('has_role', {
             _user_id: userId,
             _role: 'admin'
           });
-        
+
         const rpcTimeout = new Promise<{ data: false; error: { message: string } }>((resolve) => {
           setTimeout(() => {
             resolve({ data: false, error: { message: 'RPC timeout após 2 segundos' } });
@@ -168,7 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
         const { data: hasRoleData, error: hasRoleError } = await Promise.race([rpcPromise, rpcTimeout]);
-        
+
         if (!hasRoleError && hasRoleData === true) {
           isAdminResult = true;
           console.log('✅ has_role RPC retornou true');
@@ -218,9 +234,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (isAdminResult) {
         console.log('✅ Usuário é ADMIN');
         setIsAdmin(true);
+        verifiedUserIdRef.current = userId;
       } else {
         console.log('❌ Usuário NÃO é admin');
         setIsAdmin(false);
+        verifiedUserIdRef.current = userId; // Também marca como verificado para não checar de novo inutilmente
       }
     } catch (error) {
       console.error('❌ Erro ao verificar admin:', error);
@@ -241,7 +259,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) throw error;
-      
+
       // Role check will be handled by onAuthStateChange
       toast.success('Login realizado com sucesso!');
     } catch (error: any) {
@@ -277,18 +295,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         idleTimerRef.current = undefined;
       }
       checkingRoleRef.current = false;
-      
+
       // Reset state imediatamente
       setIsAdmin(false);
       setUser(null);
       setSession(null);
       setCheckingRole(false);
       setLoading(false);
-      
+      verifiedUserIdRef.current = null;
+
       // Depois faz signOut no Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+
       toast.success('Logout realizado com sucesso!');
     } catch (error: any) {
       console.error('Erro no logout:', error);
