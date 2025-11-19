@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,10 +31,8 @@ export const useCart = () => {
 
   const addToCart = (item: Omit<CartItem, 'id' | 'quantity'>) => {
     if (!user) {
-      toast({
-        title: "Login necessário",
+      toast.error("Login necessário", {
         description: "Faça login para adicionar produtos ao carrinho",
-        variant: "destructive",
       });
       navigate('/auth');
       return;
@@ -45,8 +43,7 @@ export const useCart = () => {
       );
 
       if (existingItem) {
-        toast({
-          title: "Quantidade atualizada",
+        toast.info("Quantidade atualizada", {
           description: `${item.name} - ${item.size}`,
         });
         return prevItems.map(i =>
@@ -56,8 +53,7 @@ export const useCart = () => {
         );
       }
 
-      toast({
-        title: "Adicionado ao carrinho",
+      toast.success("Adicionado ao carrinho", {
         description: `${item.name} - ${item.size}`,
       });
 
@@ -84,8 +80,7 @@ export const useCart = () => {
 
   const removeItem = (id: string) => {
     setCartItems(items => items.filter(item => item.id !== id));
-    toast({
-      title: "Item removido",
+    toast.info("Item removido", {
       description: "Produto removido do carrinho",
     });
   };

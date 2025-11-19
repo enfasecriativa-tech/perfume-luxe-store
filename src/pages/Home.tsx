@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -33,30 +34,11 @@ interface Banner {
 }
 
 const Home = () => {
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [banners, setBanners] = useState<Banner[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [bannersLoading, setBannersLoading] = useState(true);
 
-  useEffect(() => {
-    loadFeaturedProducts();
-    loadBanners();
-  }, []);
-
-  useEffect(() => {
-    if (banners.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
-      }, 5000); // Muda a cada 5 segundos
-
-      return () => clearInterval(interval);
-    }
-  }, [banners.length]);
-
-  const loadBanners = async () => {
-    try {
-      setBannersLoading(true);
+  const { data: banners = [], isLoading: bannersLoading } = useQuery({
+    queryKey: ['banners'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('banners')
         .select('*')
@@ -64,42 +46,37 @@ const Home = () => {
         .order('display_order', { ascending: true });
 
       if (error) throw error;
-      const activeBanners = data || [];
-      setBanners(activeBanners);
-      // Resetar índice quando banners são recarregados
-      if (activeBanners.length > 0) {
-        setCurrentBannerIndex(0);
-      }
-    } catch (error) {
-      console.error('Error loading banners:', error);
-    } finally {
-      setBannersLoading(false);
-    }
-  };
+      return data as Banner[];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  const loadFeaturedProducts = async () => {
-    try {
-      // Load products
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .limit(4);
+  const { data: featuredProducts = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: async () => {
+      // Fetch products and variants in parallel for better performance
+      const [productsResponse, variantsResponse] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .limit(4),
+        supabase
+          .from('product_variants')
+          .select('*')
+          .eq('is_active', true)
+      ]);
 
-      if (productsError) throw productsError;
+      if (productsResponse.error) throw productsResponse.error;
+      if (variantsResponse.error) throw variantsResponse.error;
 
-      // Load variants for all products
-      const { data: variantsData, error: variantsError } = await supabase
-        .from('product_variants')
-        .select('*')
-        .eq('is_active', true);
+      const products = productsResponse.data || [];
+      const variants = variantsResponse.data || [];
 
-      if (variantsError) throw variantsError;
-
-      // Combine products with their variants
-      const productsWithVariants: Product[] = (productsData || []).map(product => ({
+      // Combine in memory
+      return products.map(product => ({
         ...product,
-        variants: (variantsData || [])
+        variants: variants
           .filter(v => v.product_id === product.id)
           .map(v => ({
             id: v.id,
@@ -108,15 +85,19 @@ const Home = () => {
             is_sold_out: v.is_sold_out || false,
           }))
           .sort((a, b) => a.price - b.price)
-      })).filter(p => p.variants.length > 0);
+      })).filter(p => p.variants.length > 0) as Product[];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-      setFeaturedProducts(productsWithVariants);
-    } catch (error) {
-      console.error('Error loading featured products:', error);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (banners.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(interval);
     }
-  };
+  }, [banners.length]);
 
   const nextBanner = () => {
     setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
@@ -131,7 +112,7 @@ const Home = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
+
       <main className="flex-1">
         {/* Hero Banner Carousel */}
         <section className="relative w-full overflow-hidden">
@@ -144,15 +125,6 @@ const Home = () => {
                 alt={currentBanner.title}
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
                 loading="eager"
-                onError={(e) => {
-                  // Se a imagem falhar ao carregar, força recarregamento
-                  const img = e.target as HTMLImageElement;
-                  const originalSrc = img.src;
-                  img.src = '';
-                  setTimeout(() => {
-                    img.src = originalSrc;
-                  }, 100);
-                }}
               />
             ) : !bannersLoading && banners.length === 0 ? (
               <img
@@ -161,8 +133,8 @@ const Home = () => {
                 className="absolute inset-0 w-full h-full object-cover"
               />
             ) : null}
-            
-            {/* Overlay and Content - Só mostra se houver banner cadastrado */}
+
+            {/* Overlay and Content */}
             {currentBanner && (
               <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center">
                 <div className="container mx-auto px-4">
@@ -216,11 +188,10 @@ const Home = () => {
                   <button
                     key={index}
                     onClick={() => setCurrentBannerIndex(index)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      index === currentBannerIndex
+                    className={`w-2 h-2 rounded-full transition-all ${index === currentBannerIndex
                         ? 'bg-white w-8'
                         : 'bg-white/50 hover:bg-white/75'
-                    }`}
+                      }`}
                     aria-label={`Ir para banner ${index + 1}`}
                   />
                 ))}
@@ -240,16 +211,20 @@ const Home = () => {
             </p>
           </div>
 
-          {loading ? (
-            <p className="text-center text-muted-foreground">Carregando produtos...</p>
+          {productsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-[400px] bg-gray-100 animate-pulse rounded-lg" />
+              ))}
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {featuredProducts.map((product) => {
                 const minPrice = Math.min(...product.variants.map(v => v.price));
                 const installments = "ou em até 12x (consulte condições)";
-                
+
                 return (
-                  <ProductCard 
+                  <ProductCard
                     key={product.id}
                     id={product.id}
                     image={product.image_url || '/placeholder.svg'}
