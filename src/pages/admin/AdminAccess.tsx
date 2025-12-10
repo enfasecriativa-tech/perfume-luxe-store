@@ -30,54 +30,28 @@ const AdminAccess = () => {
     setLoading(true);
     try {
       console.log('🔗 URL do Supabase:', (supabase as any).supabaseUrl);
-      console.log('🔑 Tentando invocar create-user-access...');
+      console.log('🔑 Tentando criar usuário via RPC create_user_with_role...');
 
-      const { data, error } = await supabase.functions.invoke('create-user-access', {
-        body: { email, password, full_name: fullName, role },
+      // Mapeia 'staff' para 'user' se o enum for 'user', ou mantém se for string.
+      // O enum no banco é ('admin', 'user'). Então 'staff' deve virar 'user'.
+      const dbRole = role === 'staff' ? 'user' : 'admin';
+
+      const { data, error } = await supabase.rpc('create_user_with_role', {
+        email,
+        password,
+        full_name: fullName,
+        role_name: dbRole
       });
 
-      // Tenta um fetch manual para debug
       if (error) {
-        console.error('❌ Invoke falhou, tentando fetch manual para debug...');
-        try {
-          const auth = await supabase.auth.getSession();
-          const token = auth.data.session?.access_token;
-          const projectUrl = (supabase as any).supabaseUrl;
-          const functionUrl = `${projectUrl}/functions/v1/create-user-access`;
-          console.log('📡 Fetch URL:', functionUrl);
-
-          const rawResponse = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ email, password, full_name: fullName, role })
-          });
-
-          console.log('📥 Status manual:', rawResponse.status);
-          const rawText = await rawResponse.text();
-          console.log('📄 Resposta manual:', rawText);
-        } catch (fetchErr) {
-          console.error('☠️ Fetch manual também falhou:', fetchErr);
-        }
-      }
-
-
-      if (error) {
-        console.error('Erro na Edge Function:', error);
-        console.error('Detalhes do erro:', JSON.stringify(error, null, 2));
-        // Se a função não estiver deployada, tenta método alternativo
-        if (error.message?.includes('Function not found') || error.message?.includes('404')) {
-          throw new Error('A função de criação de acesso não está disponível. Por favor, use o método alternativo via SQL Editor do Supabase.');
-        }
+        console.error('Erro no RPC:', error);
         throw error;
       }
 
+      // O RPC retorna um JSON com { ok: boolean, error?: string, userId?: string }
       if (!data?.ok) {
         const errorMsg = data?.error || 'Falha ao criar acesso';
-        console.error('Erro retornado pela função:', errorMsg);
-        console.log('Dados retornados:', data);
+        console.error('Erro retornado pelo RPC:', errorMsg);
         throw new Error(errorMsg);
       }
 
@@ -90,23 +64,6 @@ const AdminAccess = () => {
       console.error('Erro completo:', error);
       const errorMessage = error.message || 'Erro ao conceder acesso';
       toast.error(errorMessage);
-
-      // Se for erro de função não encontrada, mostra instruções
-      if (errorMessage.includes('não está disponível')) {
-        toast.info('Veja as instruções no console do navegador (F12)');
-        console.log(`
-          📝 INSTRUÇÕES PARA CRIAR ACESSO MANUALMENTE:
-          
-          1. Acesse o Supabase Dashboard: https://byzwcocakjoqepewdvgc.supabase.co
-          2. Vá em Authentication > Users > Add user
-          3. Crie o usuário com:
-             - Email: ${email}
-             - Password: ${password}
-             - ✅ Marque "Auto Confirm User"
-          4. No SQL Editor, execute:
-             SELECT public.promote_to_${role}('${email}');
-        `);
-      }
     } finally {
       setLoading(false);
     }
