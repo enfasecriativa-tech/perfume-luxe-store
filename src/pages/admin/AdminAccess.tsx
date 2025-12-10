@@ -21,33 +21,66 @@ const AdminAccess = () => {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
-    
+
     if (password.length < 6) {
       toast.error('A senha deve ter no mínimo 6 caracteres');
       return;
     }
-    
+
     setLoading(true);
     try {
+      console.log('🔗 URL do Supabase:', (supabase as any).supabaseUrl);
+      console.log('🔑 Tentando invocar create-user-access...');
+
       const { data, error } = await supabase.functions.invoke('create-user-access', {
         body: { email, password, full_name: fullName, role },
       });
-      
+
+      // Tenta um fetch manual para debug
+      if (error) {
+        console.error('❌ Invoke falhou, tentando fetch manual para debug...');
+        try {
+          const auth = await supabase.auth.getSession();
+          const token = auth.data.session?.access_token;
+          const projectUrl = (supabase as any).supabaseUrl;
+          const functionUrl = `${projectUrl}/functions/v1/create-user-access`;
+          console.log('📡 Fetch URL:', functionUrl);
+
+          const rawResponse = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ email, password, full_name: fullName, role })
+          });
+
+          console.log('📥 Status manual:', rawResponse.status);
+          const rawText = await rawResponse.text();
+          console.log('📄 Resposta manual:', rawText);
+        } catch (fetchErr) {
+          console.error('☠️ Fetch manual também falhou:', fetchErr);
+        }
+      }
+
+
       if (error) {
         console.error('Erro na Edge Function:', error);
+        console.error('Detalhes do erro:', JSON.stringify(error, null, 2));
         // Se a função não estiver deployada, tenta método alternativo
         if (error.message?.includes('Function not found') || error.message?.includes('404')) {
           throw new Error('A função de criação de acesso não está disponível. Por favor, use o método alternativo via SQL Editor do Supabase.');
         }
         throw error;
       }
-      
+
       if (!data?.ok) {
         const errorMsg = data?.error || 'Falha ao criar acesso';
         console.error('Erro retornado pela função:', errorMsg);
+        console.log('Dados retornados:', data);
         throw new Error(errorMsg);
       }
-      
+
       toast.success('Acesso concedido com sucesso!');
       setEmail('');
       setFullName('');
@@ -57,7 +90,7 @@ const AdminAccess = () => {
       console.error('Erro completo:', error);
       const errorMessage = error.message || 'Erro ao conceder acesso';
       toast.error(errorMessage);
-      
+
       // Se for erro de função não encontrada, mostra instruções
       if (errorMessage.includes('não está disponível')) {
         toast.info('Veja as instruções no console do navegador (F12)');
